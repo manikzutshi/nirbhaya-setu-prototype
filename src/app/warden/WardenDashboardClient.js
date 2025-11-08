@@ -90,84 +90,84 @@ export default function WardenDashboardClient({ user }) {
   };
 
   return (
-    <div className="w-full min-h-screen bg-base-100 px-4 pt-6 pb-16">
-      <div className="mx-auto max-w-2xl">
-        <header className="mb-6">
+    <div className="w-full min-h-screen bg-base-100 pt-6 pb-24">
+      <div className="mx-auto w-full max-w-[1200px] px-4 md:px-6 lg:grid lg:grid-cols-12 lg:gap-10">
+        <header className="mb-6 lg:col-span-12">
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Icon path={ICONS.alert} className="w-7 h-7" /> Warden Dashboard
           </h1>
           <p className="text-xs text-base-content/60">Monitoring live student safety signals</p>
         </header>
-
-        {/* Live SOS Alerts */}
-        <section className="mb-8">
-          <SectionHeader title="Live SOS Alerts" subtitle="Latest emergency requests" icon={<Icon path={ICONS.sos} className="w-5 h-5" />} />
-          <div className="space-y-3">
-            {sosAlerts.length === 0 && <EmptyState text="No SOS alerts yet" />}
-            {sosAlerts.map((a) => (
-              <div key={a.id} className="border border-error/30 bg-error/10 rounded-lg p-3 flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{a.student} • <span className="font-normal">{formatTime(a.time)}</span></p>
-                  <p className="text-xs text-base-content/70">Location: {a.location}</p>
+        {/* LEFT: Alerts */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-10">
+          <section>
+            <SectionHeader title="Live SOS Alerts" subtitle="Latest emergency requests" icon={<Icon path={ICONS.sos} className="w-5 h-5" />} />
+            <div className="space-y-3">
+              {sosAlerts.length === 0 && <EmptyState text="No SOS alerts yet" />}
+              {sosAlerts.map((a) => (
+                <div key={a.id} className="border border-error/30 bg-error/10 rounded-lg p-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{a.student} • <span className="font-normal">{formatTime(a.time)}</span></p>
+                    <p className="text-xs text-base-content/70">Location: {a.location}</p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-1 rounded bg-error text-error-content">{a.status}</span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-1 rounded bg-error text-error-content">{a.status}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Geofence Breaches */}
-        <section className="mb-8">
-          <SectionHeader title="Geofence Breaches" subtitle="Restricted zone entries" icon={<Icon path={ICONS.zone} className="w-5 h-5" />} />
-          <div className="space-y-3">
-            {breachAlerts.length === 0 && <EmptyState text="No breaches detected" />}
-            {breachAlerts.map((b) => (
-              <div key={b.id} className="border border-warning/30 bg-warning/10 rounded-lg p-3 flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{b.student} • <span className="font-normal">{formatTime(b.time)}</span></p>
-                  <p className="text-xs text-base-content/70">Zone: {b.zone}</p>
+              ))}
+            </div>
+          </section>
+          <section>
+            <SectionHeader title="Geofence Breaches" subtitle="Restricted zone entries" icon={<Icon path={ICONS.zone} className="w-5 h-5" />} />
+            <div className="space-y-3">
+              {breachAlerts.length === 0 && <EmptyState text="No breaches detected" />}
+              {breachAlerts.map((b) => (
+                <div key={b.id} className="border border-warning/30 bg-warning/10 rounded-lg p-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{b.student} • <span className="font-normal">{formatTime(b.time)}</span></p>
+                    <p className="text-xs text-base-content/70">Zone: {b.zone}</p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded ${severityClass(b.severity)}`}>{b.severity.toUpperCase()}</span>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded ${severityClass(b.severity)}`}>{b.severity.toUpperCase()}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        </div>
 
-        {/* Late Pass Requests */}
-        <section>
-          <SectionHeader title="Late Pass Requests" subtitle="Approve or deny" icon={<Icon path={ICONS.pass} className="w-5 h-5" />} />
-          {loadingPasses && <div className="text-xs text-base-content/50">Loading...</div>}
-          <div className="space-y-3 mt-2">
-            {!loadingPasses && latePassRequests.length === 0 && <EmptyState text="No pending requests" />}
-            {latePassRequests.map((p) => (
-              <div key={p.id} className="border rounded-lg p-3 bg-base-100 flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{p.student}</p>
-                  <p className="text-xs text-base-content/70">Requested until {p.until} • {formatTime(p.created)}</p>
-                  {p.reason && <p className="text-[11px] text-base-content/60 mt-0.5">{p.reason}</p>}
+        {/* RIGHT: Pass requests */}
+        <aside className="mt-10 lg:mt-0 lg:col-span-5 xl:col-span-4">
+          <section>
+            <SectionHeader title="Late Pass Requests" subtitle="Approve or deny" icon={<Icon path={ICONS.pass} className="w-5 h-5" />} />
+            {loadingPasses && <div className="text-xs text-base-content/50">Loading...</div>}
+            <div className="space-y-3 mt-2">
+              {!loadingPasses && latePassRequests.length === 0 && <EmptyState text="No pending requests" />}
+              {latePassRequests.map((p) => (
+                <div key={p.id} className="border rounded-lg p-3 bg-base-100 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{p.student}</p>
+                    <p className="text-xs text-base-content/70">Requested until {p.until} • {formatTime(p.created)}</p>
+                    {p.reason && <p className="text-[11px] text-base-content/60 mt-0.5">{p.reason}</p>}
+                  </div>
+                  <div className="flex flex-col gap-1 items-end">
+                    {p.status === 'PENDING' ? (
+                      <>
+                        <button onClick={() => updatePass(p.id, 'approve')} className="btn btn-xs btn-success flex items-center gap-1">
+                          <Icon path={ICONS.check} className="w-3 h-3" /> Approve
+                        </button>
+                        <button onClick={() => updatePass(p.id, 'deny')} className="btn btn-xs btn-error flex items-center gap-1">
+                          <Icon path={ICONS.deny} className="w-3 h-3" /> Deny
+                        </button>
+                      </>
+                    ) : (
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded ${p.status === 'APPROVED' ? 'bg-success text-success-content' : 'bg-error text-error-content'}`}>{p.status}</span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1 items-end">
-                  {p.status === 'PENDING' ? (
-                    <>
-                      <button onClick={() => updatePass(p.id, 'approve')} className="btn btn-xs btn-success flex items-center gap-1">
-                        <Icon path={ICONS.check} className="w-3 h-3" /> Approve
-                      </button>
-                      <button onClick={() => updatePass(p.id, 'deny')} className="btn btn-xs btn-error flex items-center gap-1">
-                        <Icon path={ICONS.deny} className="w-3 h-3" /> Deny
-                      </button>
-                    </>
-                  ) : (
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded ${p.status === 'APPROVED' ? 'bg-success text-success-content' : 'bg-error text-error-content'}`}>{p.status}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <footer className="mt-10 text-center text-[10px] text-base-content/50">
-          <p>Warden module • Operational view</p>
-        </footer>
+              ))}
+            </div>
+          </section>
+          <footer className="mt-10 text-center text-[10px] text-base-content/50">
+            <p>Warden module • Operational view</p>
+          </footer>
+        </aside>
       </div>
     </div>
   );

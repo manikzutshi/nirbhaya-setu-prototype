@@ -99,10 +99,11 @@ export default function ReportPage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-base-100">
-      <div className="px-4 pt-4 pb-8">
-        <div className="mx-auto max-w-md w-full">
-          <div className="mt-6 bg-primary/5 border border-primary/20 rounded-xl p-4">
+    <div className="w-full min-h-screen bg-base-100 pt-6 pb-24">
+      <div className="mx-auto w-full max-w-[1100px] px-4 md:px-6 lg:grid lg:grid-cols-12 lg:gap-10">
+        {/* LEFT: Form */}
+        <div className="lg:col-span-7 xl:col-span-8">
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
             <p className="text-sm text-base-content/80">
               <span className="font-semibold text-base-content">Help keep everyone safe.</span> Your report helps the community stay informed.
             </p>
@@ -138,25 +139,9 @@ export default function ReportPage() {
               value={reportText}
               onChange={(e) => setReportText(e.target.value)}
               placeholder="Describe the incident in detail... When did it happen? Who was involved? Any other relevant details?"
-              className="textarea textarea-bordered w-full h-32 resize-none leading-relaxed text-base"
+              className="textarea textarea-bordered w-full h-40 resize-none leading-relaxed text-base"
             />
             <p className="text-xs text-base-content/50 mt-2">Be as specific as possible to help others</p>
-          </div>
-
-          {/* Recording */}
-          <div className="mt-6 flex items-center gap-2">
-            {!recording ? (
-              <button className="btn btn-outline" onClick={startRecording} disabled={busy}>
-                <MicIcon />
-                Record What's Happening
-              </button>
-            ) : (
-              <button className="btn btn-error" onClick={stopRecording}>
-                <StopIcon />
-                Stop ({recordSecs}s)
-              </button>
-            )}
-            {busy && <span className="loading loading-dots loading-sm" />}
           </div>
 
           {/* Upload */}
@@ -199,13 +184,39 @@ export default function ReportPage() {
           <button className="btn btn-primary w-full mt-8 btn-lg shadow-lg" disabled={!reportText.trim() || busy} onClick={submitReport}>
             <SendIcon className="mr-2" /> Submit Report
           </button>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-base-content/60">
-              In immediate danger? <a href="/sos" className="text-error font-bold hover:underline">Trigger Emergency SOS</a>
-            </p>
-          </div>
         </div>
+
+        {/* RIGHT: Tools */}
+        <aside className="mt-10 lg:mt-0 lg:col-span-5 xl:col-span-4 space-y-6">
+          <div className="bg-base-100 border border-base-300 rounded-xl p-4">
+            <div className="flex items-center gap-2">
+              {!recording ? (
+                <button className="btn btn-outline" onClick={startRecording} disabled={busy}>
+                  <MicIcon />
+                  Record What's Happening
+                </button>
+              ) : (
+                <button className="btn btn-error" onClick={stopRecording}>
+                  <StopIcon />
+                  Stop ({recordSecs}s)
+                </button>
+              )}
+              {busy && <span className="loading loading-dots loading-sm" />}
+            </div>
+            <p className="text-[11px] text-base-content/60 mt-3">Use your voice to quickly capture details; transcript is auto-appended.</p>
+          </div>
+          <div className="bg-error/10 border border-error/20 rounded-lg p-4 text-xs">
+            In immediate danger? <a href="/sos" className="text-error font-bold hover:underline">Trigger Emergency SOS</a>
+          </div>
+          <div className="bg-base-200 rounded-xl p-4 text-xs text-base-content/70 leading-relaxed space-y-2">
+            <p className="font-semibold text-base-content">Tips for clear reports:</p>
+            <ul className="list-disc ml-4 space-y-1">
+              <li>Time, place, and description of people involved.</li>
+              <li>What you observed vs. what you inferred.</li>
+              <li>Attach photos or short video when safe.</li>
+            </ul>
+          </div>
+        </aside>
       </div>
     </div>
   );

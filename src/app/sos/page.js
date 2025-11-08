@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import GMap from "../components/GMap";
 
 export default function SosPage() {
   const [active, setActive] = useState(false);
@@ -78,106 +79,107 @@ export default function SosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-base-100 pb-24">
-      {/* Header / Status */}
-      <div className="px-4 pt-4 max-w-md mx-auto w-full">
-        <h1 className="text-xl font-semibold flex items-center gap-2">
-          <SosIcon className={active ? "text-error" : "text-base-content"} /> {active ? "SOS ACTIVE" : "Emergency SOS"}
-        </h1>
-        <p className="text-xs text-base-content/60 mt-1">{active ? "Help is on the way." : "Trigger SOS to alert contacts and authorities."}</p>
-      </div>
+    <div className="min-h-screen bg-base-100 pb-24 pt-6">
+      <div className="mx-auto w-full max-w-[1100px] px-4 md:px-6 lg:grid lg:grid-cols-12 lg:gap-10">
+        {/* LEFT: Map + status */}
+        <div className="lg:col-span-7 xl:col-span-8">
+          <h1 className="text-xl font-semibold flex items-center gap-2">
+            <SosIcon className={active ? "text-error" : "text-base-content"} /> {active ? "SOS ACTIVE" : "Emergency SOS"}
+          </h1>
+          <p className="text-xs text-base-content/60 mt-1">{active ? "Help is on the way." : "Trigger SOS to alert contacts and authorities."}</p>
 
-      {/* Map + overlay */}
-      <div className="mt-4 mx-auto max-w-md w-full px-4">
-        <div className="relative rounded-xl overflow-hidden shadow border border-base-300 bg-base-100" style={{ height: 240 }}>
-          <SimpleZoneMap active={active} />
-          {active && (
-            <div className="absolute top-2 left-2 flex flex-col gap-2">
-              <span className="badge badge-error">Distress</span>
-            </div>
-          )}
-          {active && (
-            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs">
-              <span className="font-medium">Response ETA</span>
-              <span className="font-bold text-primary">{eta} min</span>
-            </div>
-          )}
+          <div className="mt-4 relative rounded-xl overflow-hidden shadow border border-base-300 bg-base-100" style={{ height: 320 }}>
+            <GMap
+              zoom={15}
+              center={userLoc || { lat: 28.6139, lng: 77.2090 }}
+              markers={userLoc ? [{ position: userLoc, color: '#2563eb', label: 'You' }] : []}
+              circles={[
+                userLoc && { center: userLoc, radius: 120, strokeColor: '#16a34a', fillColor: '#16a34a', fillOpacity: 0.15 },
+                userLoc && { center: userLoc, radius: 250, strokeColor: '#f97316', fillColor: '#f97316', fillOpacity: 0.12 },
+                userLoc && { center: userLoc, radius: 400, strokeColor: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.10 },
+              ].filter(Boolean)}
+            />
+            {active && (
+              <div className="absolute top-2 left-2 flex flex-col gap-2">
+                <span className="badge badge-error">Distress</span>
+              </div>
+            )}
+            {active && (
+              <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs">
+                <span className="font-medium">Response ETA</span>
+                <span className="font-bold text-primary">{eta} min</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 bg-base-100 border border-base-300 rounded-xl p-5 flex flex-col gap-3 shadow-sm">
+            <h2 className="text-sm font-bold">Status</h2>
+            <ChecklistItem done={contactsAlerted} label="Contacts Alerted" detail="3/3" />
+            <ChecklistItem done={authoritiesNotified} label="Authorities Notified" />
+            <ChecklistItem done={eta === 0} label="Responder Arrival" detail={eta === 0 ? "Arrived" : "En route"} />
+          </div>
         </div>
-      </div>
 
-      {/* Checklist */}
-      <div className="mt-6 mx-auto max-w-md w-full px-4">
-        <div className="bg-base-100 border border-base-300 rounded-xl p-5 flex flex-col gap-3 shadow-sm">
-          <h2 className="text-sm font-bold">Status</h2>
-          <ChecklistItem done={contactsAlerted} label="Contacts Alerted" detail="3/3" />
-          <ChecklistItem done={authoritiesNotified} label="Authorities Notified" />
-          <ChecklistItem done={eta === 0} label="Responder Arrival" detail={eta === 0 ? "Arrived" : "En route"} />
-        </div>
-      </div>
-
-      {/* Voice Trigger Settings */}
-      <div className="mt-6 mx-auto max-w-md w-full px-4">
-        <div className="bg-base-100 border border-base-300 rounded-xl p-5 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
+        {/* RIGHT: Settings + transcript + actions */}
+        <aside className="mt-10 lg:mt-0 lg:col-span-5 xl:col-span-4 space-y-6">
+          <div className="bg-base-100 border border-base-300 rounded-xl p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-sm">Voice Trigger</h3>
+                <p className="text-xs text-base-content/60">Hands-free activation using panic word</p>
+              </div>
+              {listening && <span className="badge badge-info">Listening</span>}
+            </div>
             <div>
-              <h3 className="font-bold text-sm">Voice Trigger</h3>
-              <p className="text-xs text-base-content/60">Hands-free activation using panic word</p>
+              <label htmlFor="panicWordInput" className="block mb-2 text-xs font-semibold">Panic Word</label>
+              <input id="panicWordInput" className="input input-bordered w-full input-sm" value={panicWord} onChange={(e) => setPanicWord(e.target.value)} placeholder="e.g., help me" />
+              <p className="text-[11px] text-base-content/50 mt-1">Say this word loudly to auto-trigger SOS.</p>
             </div>
-            {listening && <span className="badge badge-info">Listening</span>}
+            <label className="flex items-center justify-between cursor-pointer p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
+              <span className="text-xs font-semibold">Enable Voice Trigger</span>
+              <input type="checkbox" className="toggle toggle-primary" checked={listening} onChange={toggleListening} />
+            </label>
           </div>
-          <div>
-            <label htmlFor="panicWordInput" className="block mb-2 text-xs font-semibold">Panic Word</label>
-            <input id="panicWordInput" className="input input-bordered w-full input-sm" value={panicWord} onChange={(e) => setPanicWord(e.target.value)} placeholder="e.g., help me" />
-            <p className="text-[11px] text-base-content/50 mt-1">Say this word loudly to auto-trigger SOS.</p>
-          </div>
-          <label className="flex items-center justify-between cursor-pointer p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
-            <span className="text-xs font-semibold">Enable Voice Trigger</span>
-            <input type="checkbox" className="toggle toggle-primary" checked={listening} onChange={toggleListening} />
-          </label>
-        </div>
-      </div>
 
-      {/* Transcript */}
-      <div className="mt-6 mx-auto max-w-md w-full px-4">
-        <div className="bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold">Live Transcript</h3>
-            <span className="text-[10px] text-base-content/50">Gemini (mock)</span>
+          <div className="bg-base-100 border border-base-300 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold">Live Transcript</h3>
+              <span className="text-[10px] text-base-content/50">Gemini (mock)</span>
+            </div>
+            {transcript.length === 0 ? (
+              <p className="text-xs text-base-content/50">No speech captured yet…</p>
+            ) : (
+              <ul className="space-y-1 max-h-40 overflow-y-auto text-xs leading-relaxed">
+                {transcript.map((line, i) => <li key={i}>{line}</li>)}
+              </ul>
+            )}
           </div>
-          {transcript.length === 0 ? (
-            <p className="text-xs text-base-content/50">No speech captured yet…</p>
-          ) : (
-            <ul className="space-y-1 max-h-40 overflow-y-auto text-xs leading-relaxed">
-              {transcript.map((line, i) => <li key={i}>{line}</li>)}
-            </ul>
-          )}
-        </div>
-      </div>
 
-      {/* Actions */}
-      <div className="mt-8 mx-auto max-w-md w-full px-4 flex flex-col gap-3">
-        {!active ? (
-          <button className="btn btn-error w-full btn-lg text-lg font-bold shadow-2xl" onClick={startSos}>
-            <SosIcon className="h-6 w-6" /> EMERGENCY SOS
-          </button>
-        ) : (
-          <button className="btn btn-error w-full btn-lg text-lg font-bold" disabled>
-            <SosIcon className="h-6 w-6" /> SOS ACTIVATED
-          </button>
-        )}
-        <div className="flex gap-2 w-full">
-          <button className="btn btn-outline flex-1" onClick={() => vibrate(40)}>
-            <PhoneIcon className="h-5 w-5" /> Call
-          </button>
-          <button className="btn btn-outline flex-1" onClick={() => vibrate(40)}>
-            <ChatIcon className="h-5 w-5" /> Message
-          </button>
-          {active && (
-            <button className="btn btn-ghost flex-1" onClick={cancelSos}>
-              <CancelIcon className="h-5 w-5" /> Cancel
-            </button>
-          )}
-        </div>
+          <div className="flex flex-col gap-3">
+            {!active ? (
+              <button className="btn btn-error w-full btn-lg text-lg font-bold shadow-2xl" onClick={startSos}>
+                <SosIcon className="h-6 w-6" /> EMERGENCY SOS
+              </button>
+            ) : (
+              <button className="btn btn-error w-full btn-lg text-lg font-bold" disabled>
+                <SosIcon className="h-6 w-6" /> SOS ACTIVATED
+              </button>
+            )}
+            <div className="flex gap-2 w-full">
+              <button className="btn btn-outline flex-1" onClick={() => vibrate(40)}>
+                <PhoneIcon className="h-5 w-5" /> Call
+              </button>
+              <button className="btn btn-outline flex-1" onClick={() => vibrate(40)}>
+                <ChatIcon className="h-5 w-5" /> Message
+              </button>
+              {active && (
+                <button className="btn btn-ghost flex-1" onClick={cancelSos}>
+                  <CancelIcon className="h-5 w-5" /> Cancel
+                </button>
+              )}
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

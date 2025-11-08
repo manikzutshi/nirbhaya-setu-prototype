@@ -1,4 +1,3 @@
-import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { auth0 } from "@/lib/auth0";
 
@@ -6,8 +5,7 @@ export default async function Home() {
   const session = await auth0.getSession();
   const user = session?.user;
   return (
-    <>
-      <Navbar />
+  <>
       <main className="bg-white text-gray-800">
         {user ? (
           <div className="bg-success/10 text-success px-4 py-2 text-sm text-center">Welcome back, {user.name}!</div>
@@ -22,22 +20,27 @@ export default async function Home() {
             <div className="flex flex-col items-center gap-8 pb-8 text-center lg:items-start lg:py-16 lg:text-left">
               <h1 className="flex flex-col gap-3 font-extrabold tracking-tight text-gray-900 text-4xl sm:text-5xl lg:text-6xl">
                 <span>Empowering Women,</span>
-                <span className="relative whitespace-nowrap">
-                  <span className="mr-3 sm:mr-4 md:mr-5">Securing</span>
-                  <span className="relative whitespace-nowrap">
-                    <span className="absolute bg-primary -left-2 -top-1 -bottom-1 -right-2 -rotate-2 md:-left-3 md:top-0 md:bottom-0 md:-right-3"></span>
-                    <span className="relative text-white">Our Communities</span>
+                <span className="relative sm:whitespace-nowrap whitespace-normal">
+                  <span className="mr-2 sm:mr-3 md:mr-5">Securing</span>
+                  <br className="block sm:hidden" />
+                  <span className="inline-block md:-rotate-1">
+                    <span className="inline-block bg-primary text-white px-2 py-0.5 rounded">
+                      Our Communities
+                    </span>
                   </span>
                 </span>
               </h1>
               
               {/* Image for Mobile */}
-              <div className="block lg:hidden w-full max-w-md mx-auto py-4">
-                <img
-                  src="/girl.svg"
-                  alt="Women safety illustration"
-                  className="w-full h-auto"
-                />
+              <div className="block lg:hidden w-full mx-auto py-2">
+                <div className="mx-auto max-w-[260px] aspect-square relative">
+                  <img
+                    src="/girl.svg"
+                    alt="Women safety illustration"
+                    className="w-full h-full object-contain drop-shadow-sm"
+                    loading="lazy"
+                  />
+                </div>
               </div>
 
               <p className="max-w-xl text-lg leading-relaxed text-gray-600 sm:my-4">
@@ -51,12 +54,15 @@ export default async function Home() {
             </div>
 
             {/* Image for Desktop */}
-            <div className="relative hidden lg:block">
-              <img
-                src="/girl.svg"
-                alt="Women safety illustration"
-                className="w-lg h-auto max-w-xl mx-auto"
-              />
+            <div className="relative hidden lg:flex items-center justify-center">
+              <div className="w-full max-w-md xl:max-w-lg 2xl:max-w-xl aspect-square">
+                <img
+                  src="/girl.svg"
+                  alt="Women safety illustration"
+                  className="w-full h-full object-contain"
+                  priority
+                />
+              </div>
             </div>
           </div>
         </div>

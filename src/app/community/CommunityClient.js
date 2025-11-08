@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import CommunityMap from './CommunityMap';
+import GMap from '../components/GMap';
 
 const Icon = ({ path, className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -19,6 +19,7 @@ const ICONS = {
 };
 
 export default function CommunityClient() {
+  // State
   const [feedbackList, setFeedbackList] = useState([
     {
       id: 1,
@@ -67,12 +68,10 @@ export default function CommunityClient() {
     }
   }, []);
 
-  const zones = feedbackList.map((f) => ({
-    cx: 150 + (f.location[1] - 77.208) * 800, // rough projection
-    cy: 120 + (f.location[0] - 28.612) * -800,
-    radius: 40,
+  const circles = feedbackList.map((f) => ({
+    center: { lat: f.location[0], lng: f.location[1] },
+    radius: 60,
     color: f.likes > f.dislikes * 2 ? '#22c55e' : f.dislikes > f.likes ? '#ef4444' : '#f59e0b',
-    label: f.comment.substring(0, 18) + (f.comment.length > 18 ? '…' : ''),
   }));
 
   function handleVote(id, type) {
@@ -114,142 +113,157 @@ export default function CommunityClient() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-base-100 px-4 pt-6 pb-16">
-      <div className="mx-auto max-w-md">
-        {/* Header / Hero */}
-        <div className="mt-2">
-          <h1 className="text-xl font-bold mb-2">Share Your Experience</h1>
-          <p className="text-xs text-base-content/70 leading-relaxed">
-            Help others stay safer by sharing real-world observations from your area.
-          </p>
-          <button
-            className="btn btn-primary w-full mt-4 shadow-md flex items-center gap-2"
-            onClick={() => {
-              setSelectedLocation([center.lat, center.lng]);
-              setShowAddForm(true);
-            }}
-          >
-            <Icon path={ICONS.add} className="w-5 h-5" /> Add Your Feedback
-          </button>
+    <div className="w-full min-h-screen bg-base-100 pt-4 pb-24">
+      <div className="mx-auto w-full max-w-[1100px] px-3 md:px-6 lg:grid lg:grid-cols-12 lg:gap-10">
+        {/* LEFT COLUMN */}
+  <div className="lg:col-span-7 xl:col-span-8">
+          <header className="mb-6">
+            <h1 className="text-2xl font-bold tracking-tight">Share Your Experience</h1>
+            <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-base-content/70">
+              Contribute real observations so others can make safer decisions.
+            </p>
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                className="btn btn-primary shadow-md flex items-center gap-2"
+                onClick={() => {
+                  setSelectedLocation([center.lat, center.lng]);
+                  setShowAddForm(true);
+                }}
+              >
+                <Icon path={ICONS.add} className="w-5 h-5" /> Add Feedback
+              </button>
+              <Link href="/sos" className="btn btn-ghost btn-sm text-error flex items-center gap-2">
+                <Icon path={ICONS.warn} className="w-4 h-4" /> SOS
+              </Link>
+            </div>
+          </header>
+
+          {showAddForm && (
+            <div className="mb-8 bg-base-200 rounded-xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-base">Add Your Feedback</h3>
+                <button
+                  className="btn btn-circle btn-ghost btn-xs"
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewComment('');
+                  }}
+                >
+                  <Icon path={ICONS.close} className="w-4 h-4" />
+                </button>
+              </div>
+              <textarea
+                className="textarea textarea-bordered w-full h-28 resize-none text-sm"
+                placeholder="What should others know about this area?"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+              <div className="flex gap-2 mt-4">
+                <button
+                  className="btn btn-ghost flex-1"
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewComment('');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary flex-1 shadow-md"
+                  onClick={addFeedback}
+                  disabled={!newComment.trim()}
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          )}
+
+          <section>
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold">Community Reports</h2>
+                <p className="text-xs text-base-content/60 mt-0.5">
+                  {feedbackList.length} {feedbackList.length === 1 ? 'report' : 'reports'} nearby
+                </p>
+              </div>
+            </div>
+      <div className="space-y-4">
+              {feedbackList.map((f) => (
+        <article key={f.id} className="bg-base-100 border border-base-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="avatar placeholder shrink-0">
+                      <div className="bg-primary/10 text-primary rounded-full w-10 flex items-center justify-center">
+                        <span className="text-sm font-bold">{f.user[0]}</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm">{f.user}</p>
+                      <p className="text-[10px] text-base-content/50">{f.timestamp}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed mb-4 pl-[52px] max-w-[50ch] md:max-w-[60ch]">{f.comment}</p>
+                  <div className="flex items-center gap-2 mb-4 pl-[52px]">
+                    <Icon path={ICONS.location} className="w-4 h-4 text-base-content/40" />
+                    <span className="text-[10px] text-base-content/50 font-mono">
+                      {f.location[0].toFixed(4)}, {f.location[1].toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 pl-[52px]">
+                    <button
+                      onClick={() => handleVote(f.id, 'like')}
+                      className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'like' ? 'btn-success' : 'btn-ghost'}`}
+                    >
+                      <Icon path={ICONS.thumbUp} className="w-4 h-4" />
+                      <span className="font-semibold text-[11px]">{f.likes}</span>
+                    </button>
+                    <button
+                      onClick={() => handleVote(f.id, 'dislike')}
+                      className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'dislike' ? 'btn-error' : 'btn-ghost'}`}
+                    >
+                      <Icon path={ICONS.thumbDown} className="w-4 h-4" />
+                      <span className="font-semibold text-[11px]">{f.dislikes}</span>
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+          <footer className="mt-12 text-center text-[10px] text-base-content/50">
+            <p>Community module • Shared safety intelligence</p>
+          </footer>
         </div>
 
-        {/* Quick SOS Banner */}
-        <div className="mt-6 bg-error/10 border border-error/20 rounded-lg p-3 flex items-center gap-3">
-          <Icon path={ICONS.warn} className="w-5 h-5 text-error" />
-          <span className="text-xs text-base-content/80">
-            In danger? <Link href="/sos" className="font-bold text-error hover:underline">Trigger SOS</Link>
-          </span>
-        </div>
-
-        {/* Map Section */}
-        <section className="mt-8">
-          <h2 className="text-[11px] font-bold uppercase tracking-wide mb-3">Safety Map</h2>
-          <div className="rounded-xl overflow-hidden shadow-lg" style={{ height: 240 }}>
-            <CommunityMap zones={zones} userLocation={location} />
+        {/* RIGHT COLUMN (Map & context) */}
+        <aside className="mt-8 lg:mt-0 lg:col-span-5 xl:col-span-4 space-y-6">
+          <div className="rounded-xl overflow-hidden shadow border border-base-300 bg-base-100" style={{ height: 240 }}>
+            <GMap
+              center={center}
+              zoom={14}
+              markers={location ? [{ ...center, label: 'You' }] : []}
+              circles={circles}
+            />
           </div>
-          <div className="flex items-center justify-center gap-4 mt-3 text-[10px]">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-[10px]">
             <LegendDot color="#22c55e" label="Safe" />
             <LegendDot color="#f59e0b" label="Caution" />
             <LegendDot color="#ef4444" label="Unsafe" />
           </div>
-        </section>
-
-        {/* Add Feedback Form */}
-        {showAddForm && (
-          <div className="mt-8 bg-base-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-base">Add Your Feedback</h3>
-              <button
-                className="btn btn-circle btn-ghost btn-xs"
-                onClick={() => {
-                  setShowAddForm(false);
-                  setNewComment('');
-                }}
-              >
-                <Icon path={ICONS.close} className="w-4 h-4" />
-              </button>
-            </div>
-            <textarea
-              className="textarea textarea-bordered w-full h-28 resize-none text-sm"
-              placeholder="What should others know about this area?"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-            />
-            <div className="flex gap-2 mt-4">
-              <button
-                className="btn btn-ghost flex-1"
-                onClick={() => {
-                  setShowAddForm(false);
-                  setNewComment('');
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary flex-1 shadow-md"
-                onClick={addFeedback}
-                disabled={!newComment.trim()}
-              >
-                Post
-              </button>
-            </div>
+          <div className="bg-error/10 border border-error/20 rounded-lg p-3 flex items-start gap-3">
+            <Icon path={ICONS.warn} className="w-5 h-5 text-error" />
+            <span className="text-xs text-base-content/80 leading-relaxed max-w-[42ch]">
+              In danger? <Link href="/sos" className="font-bold text-error hover:underline">Trigger SOS</Link> to alert contacts & authorities.
+            </span>
           </div>
-        )}
-
-        {/* Community Feedback List */}
-        <section className="mt-10">
-          <div className="flex items-baseline justify-between mb-5">
-            <div>
-              <h2 className="text-lg font-bold">Community Reports</h2>
-              <p className="text-xs text-base-content/60 mt-0.5">
-                {feedbackList.length} {feedbackList.length === 1 ? 'report' : 'reports'} from your area
-              </p>
-            </div>
+          <div className="bg-base-200 rounded-xl p-3 text-xs text-base-content/70 leading-relaxed space-y-2">
+            <p className="font-semibold text-base-content">Tips for helpful feedback:</p>
+            <ul className="list-disc ml-4 space-y-1">
+              <li>Describe lighting & crowd density.</li>
+              <li>Note specific recurring issues.</li>
+              <li>Keep tone factual & concise.</li>
+            </ul>
           </div>
-          <div className="space-y-4">
-            {feedbackList.map((f) => (
-              <div key={f.id} className="bg-base-100 border border-base-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="avatar placeholder shrink-0">
-                    <div className="bg-primary/10 text-primary rounded-full w-10 flex items-center justify-center">
-                      <span className="text-sm font-bold">{f.user[0]}</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm">{f.user}</p>
-                    <p className="text-[10px] text-base-content/50">{f.timestamp}</p>
-                  </div>
-                </div>
-                <p className="text-sm leading-relaxed mb-4 pl-[52px]">{f.comment}</p>
-                <div className="flex items-center gap-2 mb-4 pl-[52px]">
-                  <Icon path={ICONS.location} className="w-4 h-4 text-base-content/40" />
-                  <span className="text-[10px] text-base-content/50 font-mono">
-                    {f.location[0].toFixed(4)}, {f.location[1].toFixed(4)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 pl-[52px]">
-                  <button
-                    onClick={() => handleVote(f.id, 'like')}
-                    className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'like' ? 'btn-success' : 'btn-ghost'}`}
-                  >
-                    <Icon path={ICONS.thumbUp} className="w-4 h-4" />
-                    <span className="font-semibold text-[11px]">{f.likes}</span>
-                  </button>
-                  <button
-                    onClick={() => handleVote(f.id, 'dislike')}
-                    className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'dislike' ? 'btn-error' : 'btn-ghost'}`}
-                  >
-                    <Icon path={ICONS.thumbDown} className="w-4 h-4" />
-                    <span className="font-semibold text-[11px]">{f.dislikes}</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        <footer className="mt-10 text-center text-[10px] text-base-content/50">
-          <p>Community module • Shared safety intelligence</p>
-        </footer>
+        </aside>
       </div>
     </div>
   );

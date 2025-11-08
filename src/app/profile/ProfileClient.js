@@ -72,9 +72,9 @@ export default function ProfileClient({ user }) {
   const cluster = 'devnet';
 
   return (
-    <div className="w-full min-h-screen bg-base-100 px-4 pt-6 pb-20">
-      <div className="mx-auto max-w-md">
-        <header className="mb-6">
+    <div className="w-full min-h-screen bg-base-100 pt-6 pb-24">
+      <div className="mx-auto w-full max-w-[1100px] px-4 md:px-6 lg:grid lg:grid-cols-12 lg:gap-10">
+        <header className="mb-6 lg:col-span-12">
           <h1 className="text-xl font-bold tracking-tight">Profile & Contacts</h1>
           <p className="text-xs text-base-content/60">Manage trusted safety contacts & view report receipts</p>
           {user ? (
@@ -84,8 +84,8 @@ export default function ProfileClient({ user }) {
           )}
         </header>
 
-        {/* Trusted Contacts Section */}
-    <section className="mb-10">
+  {/* LEFT: Contacts */}
+  <section className="mb-10 lg:col-span-5 xl:col-span-4">
           <div className="mb-3 flex items-center gap-2">
             <Icon path={ICONS.contact} className="w-5 h-5" />
             <h2 className="text-lg font-bold">Trusted Contacts</h2>
@@ -129,8 +129,8 @@ export default function ProfileClient({ user }) {
           </div>
         </section>
 
-        {/* Report History Section */}
-        <section>
+  {/* RIGHT: Report history */}
+  <section className="lg:col-span-7 xl:col-span-8">
           <div className="mb-3 flex items-center gap-2">
             <Icon path={ICONS.report} className="w-5 h-5" />
             <h2 className="text-lg font-bold">My Report History</h2>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import GMap from "../components/GMap";
 
 export default function RoutePlannerPage() {
   const [origin, setOrigin] = useState("");
@@ -30,9 +31,10 @@ export default function RoutePlannerPage() {
   }, []);
 
   return (
-    <div className="w-full">
-      <div className="px-4 pt-4">
-        <div className="mx-auto max-w-md w-full">
+    <div className="w-full min-h-screen bg-base-100 pt-6 pb-24">
+      <div className="mx-auto w-full max-w-[1100px] px-4 md:px-6 lg:grid lg:grid-cols-12 lg:gap-10">
+        {/* LEFT: Inputs */}
+        <div className="lg:col-span-5 xl:col-span-4">
           <h1 className="text-xl font-semibold text-base-content/70">Route Planner</h1>
           <p className="text-sm text-base-content/60 mt-1">Compare fastest vs safest routes.</p>
 
@@ -49,36 +51,39 @@ export default function RoutePlannerPage() {
               <button className="btn btn-primary" onClick={planRoute} disabled={loading}>
                 {loading ? "Planning…" : "Plan Route"}
               </button>
-              {plan && (
-                <div className="flex-1 grid grid-cols-2 gap-2 text-xs">
-                  <InfoPill label="Fastest" value={`${plan.fastest.meta.eta} | ${plan.fastest.meta.distance}`} color="text-error" />
-                  <InfoPill label="Safest" value={`${plan.safest.meta.eta} | ${plan.safest.meta.distance}`} color="text-success" />
-                </div>
-              )}
             </div>
-          </div>
-
-          {/* Map */}
-          <div className="mt-6 rounded-xl overflow-hidden shadow border border-base-300 bg-base-100">
-            <div className="p-3 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-3">
-                <Legend color="#ef4444" text="Fastest (High Risk)" dashed />
-                <Legend color="#22c55e" text="Safest (Low Risk)" />
+            {plan && (
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <InfoPill label="Fastest" value={`${plan.fastest.meta.eta} | ${plan.fastest.meta.distance}`} color="text-error" />
+                <InfoPill label="Safest" value={`${plan.safest.meta.eta} | ${plan.safest.meta.distance}`} color="text-success" />
               </div>
-              {plan?.safest?.meta?.risk && (
-                <span className="font-medium text-base-content/70">Risk: {plan.safest.meta.risk}</span>
-              )}
-            </div>
-            <div className="w-full" style={{ height: 280 }}>
-              <SimpleMap fastest={plan?.fastest?.path || []} safest={plan?.safest?.path || []} />
-            </div>
+            )}
+            <p className="mt-3 text-xs text-base-content/50">
+              Routes computed on backend (A*). Risk scores provided by our AI model. This demo uses mock data.
+            </p>
           </div>
-
-          {/* Notes */}
-          <p className="mt-3 text-xs text-base-content/50">
-            Routes computed on backend (A*). Risk scores provided by our AI model. This demo uses mock data.
-          </p>
         </div>
+
+        {/* RIGHT: Map */}
+        <aside className="mt-10 lg:mt-0 lg:col-span-7 xl:col-span-8">
+          <div className="rounded-xl overflow-hidden shadow border border-base-300 bg-base-100" style={{ height: 360 }}>
+            <GMap
+              zoom={14}
+              center={{ lat: 28.6139, lng: 77.2090 }}
+              polylines={plan ? [
+                { path: plan.fastest.path.map(([x,y]) => ({ lat: 28.60 + y/100, lng: 77.20 + x/100 })), strokeColor: '#ef4444', strokeWeight: 5, dashed: true },
+                { path: plan.safest.path.map(([x,y]) => ({ lat: 28.60 + y/100, lng: 77.20 + x/100 })), strokeColor: '#22c55e', strokeWeight: 5 }
+              ] : []}
+            />
+          </div>
+          <div className="mt-3 flex items-center gap-4 text-xs">
+            <Legend color="#ef4444" text="Fastest (High Risk)" dashed />
+            <Legend color="#22c55e" text="Safest (Low Risk)" />
+            {plan?.safest?.meta?.risk && (
+              <span className="font-medium text-base-content/70">Risk: {plan.safest.meta.risk}</span>
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   );
