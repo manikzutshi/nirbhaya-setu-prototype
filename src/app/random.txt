@@ -1,0 +1,392 @@
+<script lang="ts">
+    import { onMount } from 'svelte';
+    import { page } from '$app/state';
+    import { user } from '$lib/api/auth';
+    import LoginModal from '$lib/components/LoginModal.svelte';
+    import Footer from '$lib/components/Footer.svelte';
+
+    let showLoginModal = $state(false);
+
+    // Automatically open the login modal if the user was redirected with an invalid invite error.
+    onMount(() => {
+        if (page.url.searchParams.get('error') === 'invalid_invite') {
+            showLoginModal = true;
+        }
+    });
+
+    function openLoginModal() {
+        showLoginModal = true;
+    }
+</script>
+
+<svelte:head>
+    <title>Unimob | Your campus life, all in one place.</title>
+    <meta
+        name="description"
+        content="From university applications to alumni networking, Unimob connects you to your campus community at every stage of your journey."
+    />
+</svelte:head>
+
+<main class="bg-white text-gray-800">
+	<!-- ======================================= -->
+	<!-- Hero Section -->
+	<!-- ======================================= -->
+	<section class="relative bg-white overflow-hidden">
+		<div class="container relative mx-auto max-w-7xl px-6">
+			<div class="grid min-h-[90vh] items-center gap-12 lg:grid-cols-2">
+				<!-- Text Content -->
+				<div
+					class="flex flex-col items-center gap-8 pb-8 text-center lg:items-start lg:py-16 lg:text-left"
+				>
+					<h1
+						class="flex flex-col gap-3 font-extrabold tracking-tight text-gray-900 text-4xl sm:text-5xl lg:text-6xl"
+					>
+						<span>Your campus life,</span>
+						<span class="relative whitespace-nowrap">
+							<span class="mr-3 sm:mr-4 md:mr-5">all in</span>
+							<span class="relative whitespace-nowrap">
+								<span
+									class="absolute bg-primary -left-2 -top-1 -bottom-1 -right-2 -rotate-2 md:-left-3 md:-top-0 md:-bottom-0 md:-right-3"
+								></span>
+								<span class="relative text-white">one place.</span>
+							</span>
+						</span>
+					</h1>
+					<!-- Image for Mobile -->
+					<div class="block lg:hidden w-full max-w-md mx-auto py-4">
+						<img
+							src="/graduation.svg"
+							alt="Students celebrating graduation"
+							class="w-full"
+						/>
+					</div>
+					<p class="max-w-xl text-lg leading-relaxed text-gray-600 sm:my-4">
+						Connect with your juniors, seniors & share your experiences with others — everything your
+						campus life needs, in one place.
+					</p>
+					<div class="flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+						{#if $user}
+							<a href="/home" class="btn btn-primary btn-lg">Go to Home</a>
+						{:else}
+							<button onclick={openLoginModal} class="btn btn-primary btn-lg"
+								>Explore Your Campus</button
+							>
+						{/if}
+					</div>
+				</div>
+
+				<!-- Image for Desktop -->
+				<div class="relative hidden lg:block">
+					<img
+						src="/graduation.svg"
+						fetchpriority="high"
+						alt="Students celebrating graduation"
+						class="w-full max-w-2xl"
+					/>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ======================================= -->
+	<!-- Problem-Solution Section -->
+	<!-- ======================================= -->
+	<section class="text-base-content">
+		<div class="max-w-5xl mx-auto px-8 py-16 md:py-32">
+			<h2 class="text-center font-extrabold text-4xl md:text-5xl tracking-tight mb-12 md:mb-20">
+				Why settle for Bad Solutions?
+			</h2>
+			<div class="flex flex-col md:flex-row justify-center items-center md:items-start gap-8 md:gap-12">
+				<!-- Problems -->
+				<div class="bg-rose-100/75 text-rose-700 p-8 md:p-12 rounded-2xl w-full max-w-md">
+					<h3 class="font-bold text-xl mb-4">Current Problems</h3>
+					<ul class="list-disc list-inside text-base space-y-1.5">
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"></path>
+							</svg>
+							Scattered Forums Across Platforms
+						</li>
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"></path>
+							</svg>
+							Multiple Groups & Drive Links
+						</li>
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"></path>
+							</svg>
+							No Organisation
+						</li>
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"></path>
+							</svg>
+							Expensive subscriptions
+						</li>
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"></path>
+							</svg>
+							Forget taking advice from seniors
+						</li>
+					</ul>
+				</div>
+				
+				<!-- Solutions -->
+				<div class="bg-emerald-100/70 text-emerald-700 p-8 md:p-12 rounded-2xl w-full max-w-md">
+					<h3 class="font-bold text-xl mb-4">Unimob</h3>
+					<ul class="list-disc list-inside space-y-1.5">
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"></path>
+							</svg>
+							Organized forums & communities
+						</li>
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"></path>
+							</svg>
+							From notes to pyqs, everything in one place
+						</li>
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"></path>
+							</svg>
+							Organized notes that work across colleges
+						</li>
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"></path>
+							</svg>
+							Credit systems to access premium content
+						</li>
+						<li class="flex gap-2 items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4 shrink-0 opacity-75">
+								<path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"></path>
+							</svg>
+							Connect with student community at a single place
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ======================================= -->
+    <!-- Value Proposition for Each User Type -->
+    <!-- ======================================= -->
+    <section class="py-16 sm:py-24 bg-gray-50">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                    A Community for Every Step
+                </h2>
+                <p class="mt-4 text-lg text-gray-600">
+                    Whether you're applying, studying, or have graduated, Unimob is built for you.
+                </p>
+            </div>
+            <div class="mt-16 grid gap-8 md:grid-cols-3">
+                <!-- For Aspirants -->
+                <div
+                    class="group rounded-2xl bg-white p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-200"
+                >
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 256 256"><path d="M152,86a30,30,0,1,0-30-30A30,30,0,0,0,152,86Zm0-48a18,18,0,1,1-18,18A18,18,0,0,1,152,38Zm66.49,100.86c-.59.27-7.17,3.13-18.88,3.13-13.86,0-34.9-4-61.73-21a165.89,165.89,0,0,1-17.43,36.51c9.43,2.78,22,7.72,33.19,16.26C172.46,188.05,182,207.65,182,232a6,6,0,0,1-12,0c0-44-37.23-59.18-56.91-64.11q-1.2,1.55-2.46,3.09c-19.25,23.31-43.34,35.45-70.11,35.45A90.72,90.72,0,0,1,31.4,206,6,6,0,0,1,32.6,194c26.63,2.66,49.77-7.66,68.77-30.69,13.16-15.94,21.94-35.51,26.08-49.15-40.51-24.52-66.59-4.78-67.72-3.89a6,6,0,0,1-7.48-9.38c.37-.3,9.39-7.43,24.76-10,13.86-2.31,35.92-1.3,62.36,16.67,47.14,32,73.88,20.47,74.14,20.35a6,6,0,1,1,5,10.92Z"></path></svg>
+                    </div>
+                    <h3 class="mt-6 text-xl font-bold text-gray-900">For Aspirants</h3>
+                    <p class="mt-2 text-gray-600">
+                        Get authentic advice on admissions, choose the right program, and connect with current
+                        students before you even apply.
+                    </p>
+                </div>
+                <!-- For Students -->
+                <div
+                    class="group rounded-2xl bg-white p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-200"
+                >
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 256 256"><path d="M128,26A102,102,0,1,0,230,128,102.12,102.12,0,0,0,128,26Zm0,192a90,90,0,1,1,90-90A90.1,90.1,0,0,1,128,218ZM82,108a10,10,0,1,1,10,10A10,10,0,0,1,82,108Zm100,0a6,6,0,0,1-6,6H152a6,6,0,0,1,0-12h24A6,6,0,0,1,182,108Zm-8.81,47c-9.92,17.16-26.39,27-45.19,27s-35.27-9.84-45.19-27a6,6,0,0,1,10.38-6c7.84,13.54,20.2,21,34.81,21s27-7.46,34.81-21a6,6,0,1,1,10.38,6Z"></path></svg>
+                    </div>
+                    <h3 class="mt-6 text-xl font-bold text-gray-900">For Students</h3>
+                    <p class="mt-2 text-gray-600">
+                        Collaborate on projects, find study partners, share notes, and stay updated on everything
+                        happening on campus.
+                    </p>
+                </div>
+                <!-- For Alumni -->
+                <div
+                    class="group rounded-2xl bg-white p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-200"
+                >
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 256 256"><path d="M225.9,58.31l-96-32a6,6,0,0,0-3.8,0l-96,32A6,6,0,0,0,26,64v80a6,6,0,0,0,12,0V72.32l38.68,12.9A62,62,0,0,0,99,174.75c-19.25,6.53-36,19.59-48,38A6,6,0,0,0,61,219.28C76.47,195.59,100.88,182,128,182s51.53,13.59,67,37.28A6,6,0,0,0,205,212.72c-12-18.38-28.73-31.44-48-38a62,62,0,0,0,22.27-89.53L225.9,69.69a6,6,0,0,0,0-11.38ZM178,120A50,50,0,1,1,88.63,89.2l37.47,12.49a6,6,0,0,0,3.8,0L167.37,89.2A49.78,49.78,0,0,1,178,120ZM128,89.68,51,64l77-25.68L205,64Z"></path></svg>
+                    </div>
+                    <h3 class="mt-6 text-xl font-bold text-gray-900">For Alumni</h3>
+                    <p class="mt-2 text-gray-600">
+                        Mentor the next generation, network with fellow graduates, and stay connected to your
+                        alma mater long after graduation.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+	<!-- ======================================= -->
+	<!-- Features Section -->
+	<!-- ======================================= -->
+	<section id="features" class="py-16 sm:py-24">
+		<div class="max-w-5xl mx-auto px-6">
+			<div class="text-center">
+				<h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+					Two Powerful Platforms in One
+				</h2>
+				<p class="mt-4 text-lg text-gray-600">
+					Study materials when you need them, discussions when you want them.
+				</p>
+			</div>
+
+			<div class="mt-16 grid gap-12 lg:grid-cols-2">
+				<!-- Study Materials Platform -->
+				<div>
+					<h3 class="text-2xl font-bold text-gray-900 mb-6">Smart Study Materials Hub</h3>
+					<p class="text-gray-600 mb-8">Your campus library, but better with notes that work across colleges</p>
+					<div class="space-y-6">
+						<div class="group rounded-2xl bg-white p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-200">
+							<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 256 256"><path d="M104,34H56A14,14,0,0,0,42,48V208a14,14,0,0,0,14,14h48a14,14,0,0,0,14-14V48A14,14,0,0,0,104,34ZM54,78h52V178H54Zm2-32h48a2,2,0,0,1,2,2V66H54V48A2,2,0,0,1,56,46Zm48,164H56a2,2,0,0,1-2-2V190h52v18A2,2,0,0,1,104,210Zm125.7-15L196.51,37.16a14,14,0,0,0-16.63-10.85L133.07,36.37A14.09,14.09,0,0,0,122.3,53l33.19,157.81a14,14,0,0,0,6.1,8.9,13.85,13.85,0,0,0,7.57,2.26,13.55,13.55,0,0,0,3-.32l46.81-10.05A14.09,14.09,0,0,0,229.7,195Zm-82.81-83.32,50.73-10.9,14.12,67.16L161,178.81Zm-6.63-31.56L191,69.19,195.15,89l-50.73,10.9Zm-4.66-32,46.8-10.05a2.18,2.18,0,0,1,.42,0,1.89,1.89,0,0,1,1.05.32,2,2,0,0,1,.89,1.31l3.75,17.82L137.79,68.34l-3.74-17.78A2.07,2.07,0,0,1,135.6,48.1Zm80.81,151.8L169.6,210a1.92,1.92,0,0,1-1.47-.27,2,2,0,0,1-.89-1.31l-3.75-17.82,50.72-10.9L218,197.43A2.07,2.07,0,0,1,216.41,199.9Z"></path></svg>
+							</div>
+							<h4 class="mt-4 font-bold text-gray-900">Global Subject Library</h4>
+							<p class="mt-2 text-gray-600">Operating Systems notes from any college work everywhere. Smart organization across institutions.</p>
+						</div>
+						<div class="group rounded-2xl bg-white p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-200">
+							<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 256 256"><path d="M228.24,219.76l-51.38-51.38a86.15,86.15,0,1,0-8.48,8.48l51.38,51.38a6,6,0,0,0,8.48-8.48ZM38,112a74,74,0,1,1,74,74A74.09,74.09,0,0,1,38,112Z"></path></svg>
+							</div>
+							<h4 class="mt-4 font-bold text-gray-900">Smart Search & Filter</h4>
+							<p class="mt-2 text-gray-600">Find exactly what you need by college, program, or field. No more endless scrolling.</p>
+						</div>
+						<div class="group rounded-2xl bg-white p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-200">
+							<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 256 256"><path d="M224.56,103.81C213.43,97.75,198.47,93.39,182,91.34V84c0-12.12-9.58-23.1-27-30.93C139.16,45.93,118.2,42,96,42S52.84,45.93,37,53.07C19.58,60.9,10,71.88,10,84v40c0,12.12,9.58,23.1,27,30.93,10.49,4.72,23.21,8,37,9.73V172c0,12.12,9.58,23.1,27,30.93C116.84,210.07,137.8,214,160,214s43.16-3.93,59-11.07c17.39-7.83,27-18.81,27-30.93V132C246,121.35,238.39,111.34,224.56,103.81Zm-5.74,10.54C228.61,119.68,234,126,234,132c0,14.19-30.39,30-74,30a166.9,166.9,0,0,1-21.21-1.34A110.79,110.79,0,0,0,155,154.93c17.39-7.83,27-18.81,27-30.93V103.43C196.4,105.36,209.3,109.16,218.82,114.35ZM108.16,153.58c-3.92.27-8,.42-12.16.42-5.3,0-10.4-.24-15.28-.67a2.22,2.22,0,0,0-.37,0c-3.58-.33-7-.77-10.35-1.3V124.12A178,178,0,0,0,96,126a178,178,0,0,0,26-1.88V152c-4.34.69-8.91,1.22-13.69,1.56ZM170,105.89V124c0,9.54-13.75,19.8-36,25.51V121.85a115,115,0,0,0,21-6.92A66.2,66.2,0,0,0,170,105.89ZM96,54c43.61,0,74,15.81,74,30s-30.39,30-74,30S22,98.19,22,84,52.39,54,96,54ZM22,124V105.89a66.2,66.2,0,0,0,15,9,115,115,0,0,0,21,6.92v27.66C35.75,143.8,22,133.54,22,124Zm64,48v-6.28c3.3.18,6.63.28,10,.28q5.91,0,11.66-.37A123.17,123.17,0,0,0,122,169.84v27.67C99.75,191.8,86,181.54,86,172Zm48,28V172.1a177.84,177.84,0,0,0,26,1.9,178,178,0,0,0,26-1.88V200a170,170,0,0,1-52,0Zm64-2.49V169.85a115,115,0,0,0,21-6.92,66.2,66.2,0,0,0,15-9V172C234,181.54,220.25,191.8,198,197.51Z"></path></svg>
+							</div>
+							<h4 class="mt-4 font-bold text-gray-900">Fair Credit Economy</h4>
+							<p class="mt-2 text-gray-600">Earn credits by sharing your notes. Access premium content without expensive subscriptions.</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Community Platform -->
+				<div>
+					<h3 class="text-2xl font-bold text-gray-900 mb-6">Organized Discussion Forums</h3>
+					<p class="text-gray-600 mb-8">From your specific field to global conversations</p>
+					<div class="space-y-6">
+						<div class="group rounded-2xl bg-white p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-200">
+							<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 256 256"><path d="M216,82H182V48a14,14,0,0,0-14-14H40A14,14,0,0,0,26,48V176a6,6,0,0,0,3.42,5.41A5.86,5.86,0,0,0,32,182a6,6,0,0,0,3.77-1.33L73.71,150H74v34a14,14,0,0,0,14,14h94.29l37.94,30.67A6,6,0,0,0,224,230a5.86,5.86,0,0,0,2.58-.59A6,6,0,0,0,230,224V96A14,14,0,0,0,216,82ZM71.58,138a6,6,0,0,0-3.77,1.33L38,163.43V48a2,2,0,0,1,2-2H168a2,2,0,0,1,2,2v88a2,2,0,0,1-2,2ZM218,211.43l-29.81-24.1a6,6,0,0,0-3.77-1.33H88a2,2,0,0,1-2-2V150h82a14,14,0,0,0,14-14V94h34a2,2,0,0,1,2,2Z"></path></svg>
+							</div>
+							<h4 class="mt-4 font-bold text-gray-900">Multi-Level Forums</h4>
+							<p class="mt-2 text-gray-600">Your College to B.Tech to Computer Science. Find exactly the right discussion level.</p>
+						</div>
+						<div class="group rounded-2xl bg-white p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-200">
+							<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 256 256"><path d="M243.6,148.8a6,6,0,0,1-8.4-1.2A53.58,53.58,0,0,0,192,126a6,6,0,0,1,0-12,26,26,0,1,0-25.18-32.5,6,6,0,0,1-11.62-3,38,38,0,1,1,59.91,39.63A65.69,65.69,0,0,1,244.8,140.4,6,6,0,0,1,243.6,148.8ZM189.19,213a6,6,0,0,1-2.19,8.2,5.9,5.9,0,0,1-3,.81,6,6,0,0,1-5.2-3,59,59,0,0,0-101.62,0,6,6,0,1,1-10.38-6A70.1,70.1,0,0,1,103,182.55a46,46,0,1,1,50.1,0A70.1,70.1,0,0,1,189.19,213ZM128,178a34,34,0,1,0-34-34A34,34,0,0,0,128,178ZM70,120a6,6,0,0,0-6-6A26,26,0,1,1,89.18,81.49a6,6,0,1,0,11.62-3,38,38,0,1,0-59.91,39.63A65.69,65.69,0,0,0,11.2,140.4a6,6,0,1,0,9.6,7.2A53.58,53.58,0,0,1,64,126,6,6,0,0,0,70,120Z"></path></svg>
+							</div>
+							<h4 class="mt-4 font-bold text-gray-900">Connect Across Levels</h4>
+							<p class="mt-2 text-gray-600">Seniors, juniors, and alumni in one place. No more secret WhatsApp groups.</p>
+						</div>
+						<div class="group rounded-2xl bg-white p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-200">
+							<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 256 256"><path d="M210.51,31a26,26,0,0,0-47.63,6.27L148,92.82,133.12,37.28A26,26,0,0,0,82.89,50.74L93.1,88.82,81.21,86.53a26,26,0,0,0-21.37,45.85,25.81,25.81,0,0,0-9.31,15.15,26.66,26.66,0,0,0-.53,5.32V160a78,78,0,0,0,78,78h.6c42.68-.32,77.4-35.71,77.4-78.9v-3.34a53.86,53.86,0,0,0-12-33.82l19.07-71.2A25.83,25.83,0,0,0,210.51,31ZM95.88,37a14,14,0,0,1,25.65,3.38L137,98a26,26,0,0,0-17.23,5.71c-.38-.7-.79-1.39-1.24-2.07a25.72,25.72,0,0,0-12.18-9.85L94.48,47.63A13.94,13.94,0,0,1,95.88,37Zm-33.59,72.2A14,14,0,0,1,78.87,98.3l20.74,4A14,14,0,1,1,94,129.71l-12-2.31-.72-.14-.4-.07-7.63-1.47a14,14,0,0,1-10.89-16.51Zm0,40.72A14,14,0,0,1,78.66,139l1,.2L88.8,141a14,14,0,1,1-5.63,27.42l-10-2a14,14,0,0,1-10.9-16.51ZM194,159.1c0,36.62-29.39,66.63-65.5,66.9a66.06,66.06,0,0,1-64.61-50.26,25.69,25.69,0,0,0,6.92,2.46h0l10,2a26.79,26.79,0,0,0,5.25.53,26,26,0,0,0,21.64-40.34l-.42-.6a26.26,26.26,0,0,0,5.81-3.52q.57,1.06,1.23,2.07a25.86,25.86,0,0,0,16.52,11.15l8.34,1.66A34.3,34.3,0,0,0,138,160a33.85,33.85,0,0,0,9.71,23.8,6,6,0,0,0,8.57-8.4,22,22,0,0,1-3.64-25.86,6,6,0,0,0-4.1-8.75l-15.34-3.07a14,14,0,1,1,5.63-27.42l21.4,4.27A42.12,42.12,0,0,1,194,155.76Zm7.51-111.47-17.36,64.79a53.6,53.6,0,0,0-21.57-9.61l-4.59-.92,16.48-61.5a14,14,0,0,1,27,7.24Z"></path></svg>
+							</div>
+							<h4 class="mt-4 font-bold text-gray-900">Interest Communities</h4>
+							<p class="mt-2 text-gray-600">Coding clubs, sports groups, hobby discussions. Find your community beyond academics.</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ======================================= -->
+	<!-- Testimonials Section -->
+	<!-- ======================================= -->
+	<!-- <section class="py-16 sm:py-24 bg-gray-50">
+		<div class="max-w-5xl mx-auto px-6">
+			<div class="text-center">
+				<h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+					From Those Who Know Best
+				</h2>
+			</div>
+			<div class="mt-16 grid gap-8 lg:grid-cols-3">
+				<blockquote class="bg-white p-8 rounded-lg shadow-md border border-gray-200">
+					<p class="text-gray-700">
+						"As an aspirant, getting honest feedback from current students on Unimob was a
+						game-changer. I felt confident in my university choice before I even got my acceptance
+						letter."
+					</p>
+					<footer class="mt-4">
+						<p class="font-bold">Priya Sharma</p>
+						<p class="text-sm text-gray-500">Future Student, Class of 2029</p>
+					</footer>
+				</blockquote>
+				<blockquote class="bg-white p-8 rounded-lg shadow-md border border-gray-200">
+					<p class="text-gray-700">
+						"I found my entire project group for my final year capstone here. The collaboration tools
+						and resource sharing made it so much easier than juggling five different apps."
+					</p>
+					<footer class="mt-4">
+						<p class="font-bold">Arjun Menon</p>
+						<p class="text-sm text-gray-500">Computer Science Student</p>
+					</footer>
+				</blockquote>
+				<blockquote class="bg-white p-8 rounded-lg shadow-md border border-gray-200">
+					<p class="text-gray-700">
+						"Unimob helps me stay connected and give back. It’s rewarding to mentor students who are
+						on the same path I was a few years ago. Great for networking, too."
+					</p>
+					<footer class="mt-4">
+						<p class="font-bold">Anika Desai</p>
+						<p class="text-sm text-gray-500">Alumna, Class of 2021</p>
+					</footer>
+				</blockquote>
+			</div>
+		</div>
+	</section> -->
+
+
+	<!-- ======================================= -->
+	<!-- Final CTA Section -->
+	<!-- ======================================= -->
+	<section class="bg-primary">
+		<div class="mx-auto max-w-5xl px-6 py-20 text-center">
+			<h2 class="text-3xl font-extrabold text-white sm:text-4xl">
+				Ready to End the Academic Chaos?
+			</h2>
+			<p class="mx-auto mt-4 max-w-2xl text-lg text-primary-content">
+				Join thousands of Students who've ditched scattered WhatsApp groups for one organized platform. Your notes, your discussions, your community.
+			</p>
+			<div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+				{#if $user}
+					<a href="/home" class="btn btn-white text-primary btn-lg">Welcome Back!</a>
+				{:else}
+					<button onclick={openLoginModal} class="btn btn-white text-primary btn-lg"
+						>Start Organizing Your Campus Life</button
+					>
+				{/if}
+			</div>
+			<p class="mt-4 text-sm text-primary-content opacity-90">
+				Free to join • Earn credits by sharing • Built by students, for students
+			</p>
+		</div>
+	</section>
+
+
+</main>
+<Footer />
+<LoginModal bind:isOpen={showLoginModal} />
