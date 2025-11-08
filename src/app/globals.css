@@ -1,26 +1,93 @@
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@import 'tailwindcss';
+@plugin "daisyui" {
+    themes: light --default;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@plugin "daisyui/theme" {
+    name: "light";
+    default: true;
+
+    /* Base colors */
+    --color-base-100: hsl(240 33% 98%); /* Base surface color of page, used for blank backgrounds */
+    --color-base-200: hsl(240 38% 95%); /* Base color, darker shade, to create elevations */
+    --color-base-300: hsl(240 40% 92%); /* Base color, even more darker shade, to create elevations */
+    --color-base-content: hsl(240 17% 20%); /* Foreground content color to use on base color */
+
+    /* Brand colors */
+    --color-primary: hsl(13 73% 57%); /* #e16441 Primary brand color, The main color of your brand */
+    --color-primary-content: hsl(240 20% 98%); /* Foreground content color to use on primary color */
+    --color-secondary: hsl(180 19% 50%); /* Secondary brand color, The optional, secondary color of your brand */
+    --color-secondary-content: hsl(200 20% 98%); /* Foreground content color to use on secondary color */
+    --color-accent: hsl(41 94% 50%); /* Accent brand color, The optional, accent color of your brand */
+    --color-accent-content: hsl(160 20% 98%); /* Foreground content color to use on accent color */
+
+    /* Neutral color */
+    --color-neutral: hsl(13 73% 57%); /* Neutral dark color, For not-saturated parts of UI */
+    --color-neutral-content: hsl(240 0% 100%); /* Foreground content color to use on neutral color */
+
+    /* State colors */
+    --color-info: hsl(220 67% 70%); /* Info color, For informative/helpful messages */
+    --color-info-content: hsl(220 20% 98%); /* Foreground content color to use on info color */
+    --color-success: hsl(140 83% 35%); /* Success color, For success/safe messages */
+    --color-success-content: hsl(140 20% 98%); /* Foreground content color to use on success color */
+    --color-warning: hsl(30 100% 65%); /* Warning color, For warning/caution messages */
+    --color-warning-content: hsl(80 17% 20%); /* Foreground content color to use on warning color */
+    --color-error: hsl(0 59% 50%); /* Error color, For error/danger/destructive messages */
+    --color-error-content: hsl(30 20% 98%); /* Foreground content color to use on error color */
+
+    /* border radius */
+    --radius-selector: 1rem;
+    --radius-field: 0.25rem;
+    --radius-box: 0.5rem;
+
+    /* base sizes */
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+
+    /* border size */
+    --border: 1px;
+
+    /* effects */
+    --depth: 1;
+    --noise: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+
+html {
+    font-family: var(--font-gabarito), 'Gabarito', sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html {
+    color-scheme: light;
+}
+
+@utility btn {
+    @apply rounded-full shadow-none active:scale-96 transition-all duration-200 ease-in-out overflow-hidden text-ellipsis;
+}
+
+@utility input-custom-style {
+    @apply cursor-pointer items-start px-4 py-2 border border-base-300 bg-base-100 text-base-content rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary justify-start w-full overflow-hidden text-ellipsis whitespace-nowrap disabled:bg-base-200 disabled:border-base-200 disabled:text-base-content/40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out text-wrap placeholder:text-ellipsis;
+}
+
+.rich-text-content {
+    line-height: 1.42;
+    tab-size: 4;
+    text-align: left;
+    overflow-wrap: break-word;
+}
+
+@utility card-body {
+    @apply p-4;
+}
+
+@utility stats {
+    @apply rounded-2xl bg-primary text-primary-content;
+}
+
+@utility label {
+    @apply mb-1;
+}
+
+@utility dropdown-content {
+    @apply active:text-white;
 }
