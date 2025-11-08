@@ -109,7 +109,7 @@ export default function DashboardPage() {
                     const res = await fetch("/api/concierge", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ query }),
+                      body: JSON.stringify({ query, location: userLoc, hour }),
                     });
                     const data = await res.json();
                     setAnswer(data.answer || data.error || "No response");
@@ -127,7 +127,7 @@ export default function DashboardPage() {
             )}
             {!loading && !!answer && (
               <div className="mt-3 bg-base-100 border border-base-300 rounded-xl p-3 text-sm">
-                {answer}
+                {renderConciergeAnswer(answer)}
               </div>
             )}
           </div>
@@ -253,3 +253,67 @@ function LegendSwatch({ color, label }) {
 }
 
 // end
+
+// Lightweight formatter for concierge answers
+function renderConciergeAnswer(text) {
+  if (!text || typeof text !== 'string') return text;
+  // Normalize stray bold spacing like "**  Title  **" -> "**Title**"
+  let s = text.replace(/\*\*\s+([^*]+?)\s+\*\*/g, '**$1**');
+  const lines = s.split(/\r?\n/);
+
+  const blocks = [];
+  let listItems = [];
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      blocks.push(
+        <ul key={`ul-${blocks.length}`} className="list-disc pl-5 space-y-1">
+          {listItems.map((li, i) => (
+            <li key={i}>{renderInline(li)}</li>
+          ))}
+        </ul>
+      );
+      listItems = [];
+    }
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      flushList();
+      continue;
+    }
+    // Treat bullet-like lines as list items: *, -, •
+    const m = line.match(/^(?:[*•\-]\s+)(.*)$/);
+    if (m) {
+      listItems.push(m[1].replace(/^(?:[*•\-]\s+)/, '').trim());
+      continue;
+    }
+    // If we were building a list and hit a paragraph, flush list first
+    flushList();
+    blocks.push(
+      <p key={`p-${blocks.length}`} className="mb-2">
+        {renderInline(line)}
+      </p>
+    );
+  }
+  flushList();
+
+  return <>{blocks.length ? blocks : renderInline(s)}</>;
+}
+
+function renderInline(line) {
+  // Render **bold** segments; split by ** and alternate text/strong
+  if (!line.includes('**')) return line;
+  const parts = line.split('**');
+  const out = [];
+  for (let i = 0; i < parts.length; i++) {
+    const seg = parts[i];
+    if (i % 2 === 1) {
+      out.push(<strong key={`b-${i}`}>{seg.trim()}</strong>);
+    } else if (seg) {
+      out.push(<span key={`t-${i}`}>{seg}</span>);
+    }
+  }
+  return <>{out}</>;
+}
