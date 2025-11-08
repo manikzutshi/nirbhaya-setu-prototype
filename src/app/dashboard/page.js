@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import GMap from "../components/GMap";
+import { MagnifyingGlass, Siren, ChatCircle, Warning } from "../components/PhosphorIcons";
+import { useLocation } from "../components/LocationProvider";
 import { useUser } from "@auth0/nextjs-auth0";
 
 function getGreeting(date = new Date()) {
@@ -29,18 +31,7 @@ export default function DashboardPage() {
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [hour, setHour] = useState(new Date().getHours());
-  const [userLoc, setUserLoc] = useState(null);
-
-  // Acquire user location (best-effort)
-  useEffect(() => {
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {},
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    }
-  }, []);
+  const { location: userLoc } = useLocation();
 
   const greeting = useMemo(() => getGreeting(), []);
   const roles = getRoles(user);
@@ -98,7 +89,7 @@ export default function DashboardPage() {
           {/* Safety Concierge (GenAI) */}
           <div className="mt-8">
             <label className="input input-bordered flex items-center gap-2 shadow-sm w-full bg-base-100 focus-within:ring-2 focus-within:ring-primary/20 transition-shadow">
-              <SearchIcon className="text-base-content/40" />
+              <MagnifyingGlass className="text-base-content/40 h-5 w-5" />
               <input
                 type="text"
                 value={query}
@@ -148,13 +139,13 @@ export default function DashboardPage() {
             <h2 className="text-lg font-bold text-base-content mb-4">Quick Actions</h2>
 
             <a href="/sos" className="btn btn-error btn-lg w-full mb-4 text-lg shadow-lg hover:shadow-xl transition-shadow">
-              <SosIcon className="mr-2 h-6 w-6" /> Emergency SOS
+              <Siren className="mr-2 h-6 w-6" /> Emergency SOS
             </a>
 
             <div className="grid grid-cols-2 gap-3">
               <a href="/community" className="bg-base-100 border border-base-300 rounded-xl p-4 hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center gap-2 text-center">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <ChatIcon className="text-primary h-6 w-6" />
+                  <ChatCircle className="text-primary h-6 w-6" />
                 </div>
                 <div>
                   <p className="font-semibold text-sm text-base-content">Community</p>
@@ -164,7 +155,7 @@ export default function DashboardPage() {
 
               <a href="/report" className="bg-base-100 border border-base-300 rounded-xl p-4 hover:shadow-md hover:border-primary/30 transition-all flex flex-col items-center gap-2 text-center">
                 <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center">
-                  <WarningIcon className="text-warning h-6 w-6" />
+                  <Warning className="text-warning h-6 w-6" />
                 </div>
                 <div>
                   <p className="font-semibold text-sm text-base-content">Report</p>
@@ -244,19 +235,13 @@ export default function DashboardPage() {
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-error text-error-content shadow-lg hover:shadow-xl flex items-center justify-center"
         aria-label="Emergency SOS"
       >
-        <SosIcon />
+        <Siren className="h-5 w-5" />
       </a>
     </div>
   );
 }
 
-function SearchIcon({ className = "" }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${className}`}>
-      <path d="M10 2a8 8 0 105.293 14.293l4.207 4.207 1.414-1.414-4.207-4.207A8 8 0 0010 2zm0 2a6 6 0 110 12A6 6 0 0110 4z" />
-    </svg>
-  );
-}
+// Phosphor icons used above
 
 function LegendSwatch({ color, label }) {
   return (
@@ -267,26 +252,4 @@ function LegendSwatch({ color, label }) {
   );
 }
 
-function SosIcon({ className = "" }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${className}`}>
-      <path d="M12 2a1 1 0 01.894.553l8 16A1 1 0 0120 20H4a1 1 0 01-.894-1.447l8-16A1 1 0 0112 2zm0 4.618L6.618 18h10.764L12 6.618zM11 10h2v4h-2v-4zm0 6h2v2h-2v-2z" />
-    </svg>
-  );
-}
-
-function ChatIcon({ className = "" }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${className}`}>
-      <path d="M4 3h16a1 1 0 011 1v11a1 1 0 01-1 1H8.414L4.707 19.707A1 1 0 013 19V4a1 1 0 011-1zm1 2v11.586L7.586 14H19V5H5z" />
-    </svg>
-  );
-}
-
-function WarningIcon({ className = "" }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${className}`}>
-      <path d="M12 4l9 16H3l9-16zm0 3.618L6.618 18h10.764L12 7.618zM11 10h2v4h-2v-4zm0 6h2v2h-2v-2z" />
-    </svg>
-  );
-}
+// end

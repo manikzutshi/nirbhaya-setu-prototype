@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Siren, Phone, ChatCircle, X, Check, SpinnerGap } from "../components/PhosphorIcons";
+import { useLocation } from "../components/LocationProvider";
 import GMap from "../components/GMap";
 
 export default function SosPage() {
@@ -13,6 +15,7 @@ export default function SosPage() {
   const [panicWord, setPanicWord] = useState("help");
   const recognitionRef = useRef(null);
   const etaTimerRef = useRef(null);
+  const { location: userLoc } = useLocation();
 
   // Setup speech recognition for ambient transcript + panic word trigger
   useEffect(() => {
@@ -84,7 +87,7 @@ export default function SosPage() {
         {/* LEFT: Map + status */}
         <div className="lg:col-span-7 xl:col-span-8">
           <h1 className="text-xl font-semibold flex items-center gap-2">
-            <SosIcon className={active ? "text-error" : "text-base-content"} /> {active ? "SOS ACTIVE" : "Emergency SOS"}
+            <Siren className={`${active ? "text-error" : "text-base-content"} h-5 w-5`} /> {active ? "SOS ACTIVE" : "Emergency SOS"}
           </h1>
           <p className="text-xs text-base-content/60 mt-1">{active ? "Help is on the way." : "Trigger SOS to alert contacts and authorities."}</p>
 
@@ -158,23 +161,23 @@ export default function SosPage() {
           <div className="flex flex-col gap-3">
             {!active ? (
               <button className="btn btn-error w-full btn-lg text-lg font-bold shadow-2xl" onClick={startSos}>
-                <SosIcon className="h-6 w-6" /> EMERGENCY SOS
+                <Siren className="h-6 w-6" /> EMERGENCY SOS
               </button>
             ) : (
               <button className="btn btn-error w-full btn-lg text-lg font-bold" disabled>
-                <SosIcon className="h-6 w-6" /> SOS ACTIVATED
+                <Siren className="h-6 w-6" /> SOS ACTIVATED
               </button>
             )}
             <div className="flex gap-2 w-full">
               <button className="btn btn-outline flex-1" onClick={() => vibrate(40)}>
-                <PhoneIcon className="h-5 w-5" /> Call
+                <Phone className="h-5 w-5" /> Call
               </button>
               <button className="btn btn-outline flex-1" onClick={() => vibrate(40)}>
-                <ChatIcon className="h-5 w-5" /> Message
+                <ChatCircle className="h-5 w-5" /> Message
               </button>
               {active && (
                 <button className="btn btn-ghost flex-1" onClick={cancelSos}>
-                  <CancelIcon className="h-5 w-5" /> Cancel
+                  <X className="h-5 w-5" /> Cancel
                 </button>
               )}
             </div>
@@ -189,7 +192,7 @@ function ChecklistItem({ done, label, detail }) {
   return (
     <div className="flex items-center justify-between text-xs">
       <div className="flex items-center gap-2">
-        {done ? <CheckIcon className="text-success" /> : <SpinnerIcon className="text-base-content/40" />}
+  {done ? <Check className="text-success h-4 w-4" /> : <SpinnerGap className="text-base-content/40 h-4 w-4" />}
         <span className={done ? "font-semibold" : ""}>{label}{detail ? ` (${detail})` : ""}</span>
       </div>
       <span className="text-[10px] text-base-content/50">{done ? "Done" : "Pending"}</span>
@@ -217,46 +220,4 @@ function SimpleZoneMap({ active }) {
   );
 }
 
-function SosIcon({ className = "" }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${className}`} xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z" />
-    </svg>
-  );
-}
-function PhoneIcon({ className = "" }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${className}`} xmlns="http://www.w3.org/2000/svg">
-      <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.72 11.72 0 003.68.59 1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1h2.37a1 1 0 011 1 11.72 11.72 0 00.59 3.68 1 1 0 01-.24 1.01l-2.1 2.1z" />
-    </svg>
-  );
-}
-function ChatIcon({ className = "" }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${className}`} xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 4h16a1 1 0 011 1v11a1 1 0 01-1 1H7l-4 4V5a1 1 0 011-1z" />
-    </svg>
-  );
-}
-function CancelIcon({ className = "" }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${className}`} xmlns="http://www.w3.org/2000/svg">
-      <path d="M6.343 6.343l11.314 11.314-1.414 1.414L4.93 7.757l1.414-1.414z" />
-      <path d="M17.657 6.343L6.343 17.657l-1.414-1.414L16.243 4.93l1.414 1.414z" />
-    </svg>
-  );
-}
-function CheckIcon({ className = "" }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={`h-4 w-4 ${className}`} xmlns="http://www.w3.org/2000/svg">
-      <path d="M9.173 16.727l-4.9-4.9 1.414-1.414 3.486 3.485 8.485-8.485 1.414 1.414-9.9 9.9z" />
-    </svg>
-  );
-}
-function SpinnerIcon({ className = "" }) {
-  return (
-    <svg viewBox="0 0 24 24" className={`h-4 w-4 animate-spin ${className}`} xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="60" strokeDashoffset="20" />
-    </svg>
-  );
-}
+// Inline icon components replaced with Phosphor

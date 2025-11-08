@@ -50,6 +50,9 @@ export default async function Home() {
               <div className="flex flex-wrap items-center justify-center gap-4 lg:justify-start">
                 <a href="#features" className="btn btn-primary btn-lg">Explore Features</a>
                 <a href="#impact" className="btn btn-outline btn-lg">See Impact</a>
+                {user && (
+                  <a href="/dashboard" className="btn btn-accent btn-lg sm:hidden">Go to Dashboard</a>
+                )}
               </div>
             </div>
 

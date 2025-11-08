@@ -2,21 +2,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import GMap from '../components/GMap';
-
-const Icon = ({ path, className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d={path} />
-  </svg>
-);
-
-const ICONS = {
-  add: 'M12 5 V19 M5 12 H19',
-  warn: 'M12 2 L2 22 H22 L12 2 M12 16 V12 M12 20 H12.01',
-  location: 'M12 2 C8 2 5 5 5 9 C5 14.25 12 22 12 22 C12 22 19 14.25 19 9 C19 5 16 2 12 2 Z M12 12 A3 3 0 1 1 12 6 A3 3 0 0 1 12 12 Z',
-  thumbUp: 'M14 9 V5 A3 3 0 0 0 11 2 L7 11 V20 H17 L20 11 V9 H14',
-  thumbDown: 'M10 15 V19 A3 3 0 0 1 13 22 L17 13 V4 H7 L4 13 V15 H10',
-  close: 'M6 6 L18 18 M6 18 L18 6',
-};
+import { MapPin, ThumbsUp, ThumbsDown, X, ChatsCircle, Siren } from '../components/PhosphorIcons';
+import { useLocation } from "../components/LocationProvider";
 
 export default function CommunityClient() {
   // State
@@ -55,18 +42,8 @@ export default function CommunityClient() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [location, setLocation] = useState(null);
+  const { location } = useLocation();
   const center = location || { lat: 28.6129, lng: 77.2089 }; // fallback coords
-
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => setLocation(null),
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    }
-  }, []);
 
   const circles = feedbackList.map((f) => ({
     center: { lat: f.location[0], lng: f.location[1] },
@@ -130,10 +107,10 @@ export default function CommunityClient() {
                   setShowAddForm(true);
                 }}
               >
-                <Icon path={ICONS.add} className="w-5 h-5" /> Add Feedback
+                <ChatsCircle className="w-5 h-5" /> Add Feedback
               </button>
               <Link href="/sos" className="btn btn-ghost btn-sm text-error flex items-center gap-2">
-                <Icon path={ICONS.warn} className="w-4 h-4" /> SOS
+                <Siren className="w-4 h-4" /> SOS
               </Link>
             </div>
           </header>
@@ -149,7 +126,7 @@ export default function CommunityClient() {
                     setNewComment('');
                   }}
                 >
-                  <Icon path={ICONS.close} className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <textarea
@@ -204,7 +181,7 @@ export default function CommunityClient() {
                   </div>
                   <p className="text-sm leading-relaxed mb-4 pl-[52px] max-w-[50ch] md:max-w-[60ch]">{f.comment}</p>
                   <div className="flex items-center gap-2 mb-4 pl-[52px]">
-                    <Icon path={ICONS.location} className="w-4 h-4 text-base-content/40" />
+                    <MapPin className="w-4 h-4 text-base-content/40" />
                     <span className="text-[10px] text-base-content/50 font-mono">
                       {f.location[0].toFixed(4)}, {f.location[1].toFixed(4)}
                     </span>
@@ -214,14 +191,14 @@ export default function CommunityClient() {
                       onClick={() => handleVote(f.id, 'like')}
                       className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'like' ? 'btn-success' : 'btn-ghost'}`}
                     >
-                      <Icon path={ICONS.thumbUp} className="w-4 h-4" />
+                      <ThumbsUp className="w-4 h-4" />
                       <span className="font-semibold text-[11px]">{f.likes}</span>
                     </button>
                     <button
                       onClick={() => handleVote(f.id, 'dislike')}
                       className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'dislike' ? 'btn-error' : 'btn-ghost'}`}
                     >
-                      <Icon path={ICONS.thumbDown} className="w-4 h-4" />
+                      <ThumbsDown className="w-4 h-4" />
                       <span className="font-semibold text-[11px]">{f.dislikes}</span>
                     </button>
                   </div>
@@ -250,7 +227,7 @@ export default function CommunityClient() {
             <LegendDot color="#ef4444" label="Unsafe" />
           </div>
           <div className="bg-error/10 border border-error/20 rounded-lg p-3 flex items-start gap-3">
-            <Icon path={ICONS.warn} className="w-5 h-5 text-error" />
+            <Siren className="w-5 h-5 text-error" />
             <span className="text-xs text-base-content/80 leading-relaxed max-w-[42ch]">
               In danger? <Link href="/sos" className="font-bold text-error hover:underline">Trigger SOS</Link> to alert contacts & authorities.
             </span>

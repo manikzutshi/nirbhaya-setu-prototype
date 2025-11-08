@@ -2,38 +2,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import GMap from '../components/GMap';
-
-// Simple SVG icon helpers (keep inline to avoid external font loads)
-const Icon = ({ path, className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d={path} />
-  </svg>
-);
-
-const icons = {
-  sos: 'M12 2 L19 21 H5 L12 2',
-  check: 'M20 6 L9 17 L4 12',
-  add: 'M12 5 V19 M5 12 H19',
-  phone: 'M3 5 C3 4 4 3 5 3 H8 L10 7 L8.5 8.5 C9.5 10.5 11.5 12.5 13.5 13.5 L15 12 L19 14 V19 C19 20 18 21 17 21 C9.82 20.93 3.07 14.18 3 7 C3 6 3 5 3 5 Z',
-  forum: 'M3 5 H21 V15 H6 L3 18 V5',
-  report: 'M12 2 L2 7 V17 L12 22 L22 17 V7 L12 2 M12 11 V7 M12 17 V13',
-};
+import { Siren, Check, IdentificationCard, Phone, ChatsCircle, NotePencil } from '../components/PhosphorIcons';
+import { useLocation } from "../components/LocationProvider";
 
 export default function CampusSecureClient({ user }) {
   const [latePassStatus, setLatePassStatus] = useState('Approved until 22:00');
   const [applying, setApplying] = useState(false);
-  const [location, setLocation] = useState(null);
-
-  // Grab user geolocation (best-effort)
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => setLocation(null),
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    }
-  }, []);
+  const { location } = useLocation();
 
   // Mock campus zones (approximate lat/lng around a sample campus center)
   const zones = [
@@ -63,14 +38,14 @@ export default function CampusSecureClient({ user }) {
             href="/sos"
             className="btn btn-error btn-lg w-full text-lg shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center gap-2"
           >
-            <Icon path={icons.sos} className="w-6 h-6" />
+            <Siren className="w-6 h-6" />
             <span>Emergency SOS</span>
           </Link>
 
           <div className="bg-success/10 border border-success/30 rounded-xl p-5 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="w-12 h-12 rounded-full bg-success flex items-center justify-center shrink-0">
-                <Icon path={icons.check} className="w-7 h-7 text-success-content" />
+                <Check className="w-7 h-7 text-success-content" />
               </div>
               <div className="flex-1">
                 <h3 className="text-base font-semibold mb-1">Current Status</h3>
@@ -97,7 +72,7 @@ export default function CampusSecureClient({ user }) {
                 className="bg-base-100 border border-base-300 rounded-xl p-4 hover:shadow-md hover:border-primary/40 disabled:opacity-60 transition flex flex-col items-center gap-2"
               >
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Icon path={icons.add} className="w-7 h-7 text-primary" />
+                  <IdentificationCard className="w-7 h-7 text-primary" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-sm">Apply</p>
@@ -109,7 +84,7 @@ export default function CampusSecureClient({ user }) {
                 className="bg-base-100 border border-base-300 rounded-xl p-4 hover:shadow-md hover:border-primary/40 transition flex flex-col items-center gap-2"
               >
                 <div className="w-12 h-12 rounded-full bg-info/10 flex items-center justify-center">
-                  <Icon path={icons.phone} className="w-7 h-7 text-info" />
+                  <Phone className="w-7 h-7 text-info" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-sm">Contact</p>
@@ -130,7 +105,7 @@ export default function CampusSecureClient({ user }) {
                 className="bg-base-100 border border-base-300 rounded-xl p-4 hover:shadow-md hover:border-primary/40 transition flex flex-col items-center gap-2"
               >
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Icon path={icons.forum} className="w-7 h-7 text-primary" />
+                  <ChatsCircle className="w-7 h-7 text-primary" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-sm">Community</p>
@@ -142,7 +117,7 @@ export default function CampusSecureClient({ user }) {
                 className="bg-base-100 border border-base-300 rounded-xl p-4 hover:shadow-md hover:border-primary/40 transition flex flex-col items-center gap-2"
               >
                 <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center">
-                  <Icon path={icons.report} className="w-7 h-7 text-warning" />
+                  <NotePencil className="w-7 h-7 text-warning" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-sm">Report</p>

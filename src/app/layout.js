@@ -3,6 +3,7 @@ import { Auth0Provider } from "@auth0/nextjs-auth0";
 import "./globals.css";
 import AppNavbar from "./components/AppNavbar";
 import MobileDock from "./components/MobileDock";
+import { LocationProvider } from "./components/LocationProvider";
 
 const gabarito = Gabarito({
   variable: "--font-gabarito",
@@ -19,9 +20,11 @@ export default function RootLayout({ children }) {
     <html lang="en" className={gabarito.variable}>
       <body className={`${gabarito.className} antialiased`}>
         <Auth0Provider>
-          <AppNavbar />
-          <main className="w-full">{children}</main>
-          <MobileDock />
+          <LocationProvider>
+            <AppNavbar />
+            <main className="w-full">{children}</main>
+            <MobileDock />
+          </LocationProvider>
         </Auth0Provider>
       </body>
     </html>

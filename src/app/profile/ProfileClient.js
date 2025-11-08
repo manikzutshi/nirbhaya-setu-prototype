@@ -1,22 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-
-// Simple inline icon component
-const Icon = ({ path, className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d={path} />
-  </svg>
-);
-
-const ICONS = {
-  contact: 'M4 4 H20 V20 H4 V4 M8 8 H16 M8 12 H14',
-  add: 'M12 5 V19 M5 12 H19',
-  delete: 'M3 6 H21 M8 6 V4 H16 V6 M10 11 V17 M14 11 V17 M5 6 L7 20 H17 L19 6',
-  report: 'M12 2 L2 7 V17 L12 22 L22 17 V7 L12 2 M12 11 V7 M12 17 V13',
-  chain: 'M9 12 A3 3 0 0 1 12 9 L15 6 A3 3 0 0 1 19 10 L16 13 A3 3 0 0 1 13 16 M15 12 A3 3 0 0 1 12 15 L9 18 A3 3 0 0 1 5 14 L8 11 A3 3 0 0 1 11 8',
-  copy: 'M8 8 H16 V16 H8 V8 M4 4 H12 V6 H6 V14 H4 V4',
-};
+import { IdentificationCard, NotePencil, Copy, LinkSimple, X, House } from '../components/PhosphorIcons';
 
 export default function ProfileClient({ user }) {
   const [contacts, setContacts] = useState([]);
@@ -87,7 +72,7 @@ export default function ProfileClient({ user }) {
   {/* LEFT: Contacts */}
   <section className="mb-10 lg:col-span-5 xl:col-span-4">
           <div className="mb-3 flex items-center gap-2">
-            <Icon path={ICONS.contact} className="w-5 h-5" />
+            <IdentificationCard className="w-5 h-5" />
             <h2 className="text-lg font-bold">Trusted Contacts</h2>
           </div>
           <p className="text-xs text-base-content/60 mb-3">Numbers used for future AWS SNS safety alerts.</p>
@@ -107,7 +92,7 @@ export default function ProfileClient({ user }) {
         className="input input-bordered w-full"
             />
             <button onClick={addContact} className="btn btn-primary sm:w-auto w-full flex items-center gap-1">
-              <Icon path={ICONS.add} className="w-4 h-4" /> Add
+              <IdentificationCard className="w-4 h-4" /> Add
             </button>
           </div>
       <div className="space-y-2">
@@ -121,7 +106,7 @@ export default function ProfileClient({ user }) {
                   <p className="text-xs text-base-content/60">{c.phone}</p>
                 </div>
                 <button onClick={() => removeContact(c.id)} className="btn btn-xs btn-ghost text-error flex items-center gap-1">
-                  <Icon path={ICONS.delete} className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                   Remove
                 </button>
               </div>
@@ -132,7 +117,7 @@ export default function ProfileClient({ user }) {
   {/* RIGHT: Report history */}
   <section className="lg:col-span-7 xl:col-span-8">
           <div className="mb-3 flex items-center gap-2">
-            <Icon path={ICONS.report} className="w-5 h-5" />
+            <NotePencil className="w-5 h-5" />
             <h2 className="text-lg font-bold">My Report History</h2>
           </div>
           <p className="text-xs text-base-content/60 mb-3">Immutable blockchain receipts (Solana devnet) showcase trust.</p>
@@ -154,13 +139,13 @@ export default function ProfileClient({ user }) {
                       target="_blank"
                       className="btn btn-xs btn-outline flex items-center gap-1"
                     >
-                      <Icon path={ICONS.chain} className="w-3 h-3" /> Receipt
+                      <LinkSimple className="w-3 h-3" /> Receipt
                     </Link>
                     <button
                       onClick={() => copyHash(r.hash)}
                       className="btn btn-xs btn-ghost flex items-center gap-1"
                     >
-                      <Icon path={ICONS.copy} className="w-3 h-3" />
+                      <Copy className="w-3 h-3" />
                       {showHashCopied === r.hash ? 'Copied!' : 'Copy hash'}
                     </button>
                   </div>
