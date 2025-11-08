@@ -3,8 +3,10 @@
 import LoginLink from "./LoginLink";
 import LogoutLink from "./LogoutLink";
 import UserBadge from "./UserBadge";
+import { useUser } from "@auth0/nextjs-auth0";
 
 export default function Navbar() {
+  const { user } = useUser();
   return (
     <nav className="navbar sticky top-0 z-10 border-b border-gray-200 bg-white/80 backdrop-blur-md">
       <div className="container mx-auto flex max-w-7xl items-center justify-between px-4">
@@ -18,18 +20,9 @@ export default function Navbar() {
             <a href="#campus" className="btn btn-ghost text-base font-medium text-gray-600 hover:bg-gray-100">Campus Secure</a>
           </div>
           <UserBadge />
-          <AuthButtons />
+          {!user ? <LoginLink returnTo="/dashboard" /> : <LogoutLink />}
         </div>
       </div>
     </nav>
-  );
-}
-
-function AuthButtons() {
-  return (
-    <div className="flex items-center gap-2">
-      <LoginLink />
-      <LogoutLink />
-    </div>
   );
 }
