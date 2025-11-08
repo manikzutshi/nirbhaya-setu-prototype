@@ -1,35 +1,186 @@
-import { NextResponse } from "next/server";
+// File: src/app/api/route/plan/route.js
 
-// Mock A* output. Real service would call backend (Arm EC2) for computation.
+import { NextResponse } from "next/server";
+import admin from "firebase-admin";
+import { getFirestore, GeoPoint } from "firebase-admin/firestore";
+import { Client } from "@googlemaps/google-maps-services-js";
+import { distanceBetween } from "geofire-common";
+
+// --- Initialize Firebase Admin ---
+const serviceAccount = {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"), 
+};
+
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log("Firebase Admin initialized.");
+  } catch (error) {
+    console.error("Firebase Admin initialization error:", error.message);
+  }
+}
+
+// --- Initialize Google Maps Client ---
+const googleMapsClient = new Client({});
+
+// --- Helper Function: Get Risk at a Point ---
+const getRiskAtPoint = async (lat, lng) => {
+  const db = getFirestore();
+  const collectionRef = db.collection("crime_incidents");
+
+  const radiusInKm = 0.75;
+  const latPerKm = 1 / 110.574;
+  const lngPerKm = 1 / (111.320 * Math.cos(lat * (Math.PI / 180)));
+  const latDelta = radiusInKm * latPerKm;
+  const lngDelta = radiusInKm * lngPerKm;
+
+  const lowerLat = lat - latDelta;
+  const upperLat = lat + latDelta;
+  const lowerLng = lng - lngDelta;
+  const upperLng = lng + lngDelta;
+
+  const query = collectionRef
+    .where("location_coords", ">", new GeoPoint(lowerLat, lowerLng))
+    .where("location_coords", "<", new GeoPoint(upperLat, upperLng));
+  
+  const snapshot = await query.get();
+
+  let incidentCount = 0;
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    if (!data.location_coords) return; 
+
+    const docLat = data.location_coords.latitude;
+    const docLng = data.location_coords.longitude;
+
+    const distanceInKm = distanceBetween([docLat, docLng], [lat, lng]);
+    if (distanceInKm <= radiusInKm) {
+      incidentCount++;
+    }
+  });
+  return incidentCount;
+};
+
+// --- Helper Function: Decode Google's Polyline ---
+function decodePolyline(encoded) {
+  // ... (Same decodePolyline function as before)
+  let points = [];
+  let index = 0, len = encoded.length;
+  let lat = 0, lng = 0;
+  while (index < len) {
+    let b, shift = 0, result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lat += dlat;
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lng += dlng;
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return points;
+}
+
+// --- The Main API Function ---
 export async function POST(request) {
   try {
-    const { origin = "Current Location", destination = "City Center" } = await request.json();
-    // Coordinates normalized (0..1) for demo
-    const fastest = {
-      path: [
-        [0.05, 0.1],
-        [0.25, 0.3],
-        [0.5, 0.35],
-        [0.7, 0.2],
-        [0.9, 0.15],
-      ],
-      meta: { eta: "12 min", distance: "3.4 km", risk: "High" },
-    };
+    const { origin, destination } = await request.json();
 
-    const safest = {
-      path: [
-        [0.05, 0.1],
-        [0.15, 0.25],
-        [0.3, 0.5],
-        [0.55, 0.55],
-        [0.75, 0.4],
-        [0.9, 0.15],
-      ],
-      meta: { eta: "15 min", distance: "3.8 km", risk: "Low" },
-    };
+    // 1. Get REAL routes from Google Maps Directions API
+    const directionsResponse = await googleMapsClient.directions({
+      params: {
+        origin: origin + ", Delhi",
+        destination: destination + ", Delhi",
+        mode: "driving",
+        alternatives: true,
+        key: process.env.GOOGLE_MAPS_API_KEY,
+      },
+    });
 
-    return NextResponse.json({ origin, destination, fastest, safest });
+    if (directionsResponse.data.routes.length === 0) {
+      return NextResponse.json({ error: "No routes found" }, { status: 404 });
+    }
+
+    // 2. Analyze each route's risk
+    const analyzedRoutes = [];
+    for (const route of directionsResponse.data.routes) {
+      let totalRouteRisk = 0;
+      const path = decodePolyline(route.overview_polyline.points);
+      for (let i = 0; i < path.length; i += 10) {
+        const point = path[i];
+        const riskAtThisPoint = await getRiskAtPoint(point.lat, point.lng);
+        totalRouteRisk += riskAtThisPoint;
+      }
+      analyzedRoutes.push({
+        path: path,
+        meta: {
+          eta: route.legs[0].duration.text,
+          distance: route.legs[0].distance.text,
+          risk: totalRouteRisk, // This is the raw risk score
+        },
+      });
+    }
+
+    // [NEW] Normalize the risk score to be 1-10
+    const riskScores = analyzedRoutes.map(r => r.meta.risk);
+    const maxRisk = Math.max(...riskScores);
+    const minRisk = Math.min(...riskScores);
+
+    // Avoid division by zero if all routes have the same risk
+    const riskRange = maxRisk - minRisk;
+    
+    analyzedRoutes.forEach(route => {
+      let normalizedRisk = 1; // Safest possible score is 1
+      if (riskRange > 0) {
+        // Scale risk from 0 to 1
+        const scaledRisk = (route.meta.risk - minRisk) / riskRange;
+        // Scale from 1 to 10
+        normalizedRisk = 1 + scaledRisk * 9;
+      } else if (maxRisk > 0) {
+        // All routes have same risk, but it's not zero
+        normalizedRisk = 5;
+      }
+      // Update the meta object with the new score
+      route.meta.risk = normalizedRisk.toFixed(1); // e.g., "7.2"
+    });
+
+    // 3. Find the "fastest" and "safest"
+    const fastest = analyzedRoutes[0];
+    const safest = [...analyzedRoutes].sort((a, b) => a.meta.risk - b.meta.risk)[0];
+    
+// 4. Send the data back in the format the frontend expects
+    // [MODIFIED] We now also send back the start/end coordinates and addresses
+    
+    // Get the main leg of the fastest route to find start/end points
+    const leg = directionsResponse.data.routes[0].legs[0];
+
+    return NextResponse.json({ 
+      origin, 
+      destination, 
+      fastest: fastest, 
+      safest: safest,
+      // [NEW] Add the start and end data
+      start_location: leg.start_location, // This is a {lat, lng} object
+      end_location: leg.end_location,     // This is a {lat, lng} object
+      start_address: leg.start_address,   // This is a string
+      end_address: leg.end_address      // This is a string
+    });
+
   } catch (e) {
-    return NextResponse.json({ error: "Planning failed" }, { status: 500 });
+    console.error("Route planning failed:", e);
+    return NextResponse.json({ error: "Planning failed", details: e.message }, { status: 500 });
   }
 }
