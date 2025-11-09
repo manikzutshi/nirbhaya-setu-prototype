@@ -23,14 +23,17 @@ export async function POST(request) {
       const sev = d.severityScore || 0;
       if (d.source === 'user_report') { recentIncidentCount++; severitySum += sev * 1.2; } else severitySum += sev;
     }
-    // Normalize to 1-10: higher severity => lower score
-    // Simple mapping: score = 10 - (alpha*severity + beta*incidents + gamma*recent)
-    const alpha = 0.015, beta = 0.02, gamma = 0.6;
-    let score = 10 - (alpha * severitySum + beta * incidentCount + gamma * recentIncidentCount);
-    if (score < 1) score = 1; if (score > 10) score = 10;
-    let level = 'Low Risk';
-    if (score < 4) level = 'High Risk'; else if (score < 7) level = 'Medium Risk';
-    return NextResponse.json({ score: score.toFixed(1), level, incidentCount, recentIncidentCount, severitySum, source: 'mongo' });
+  // Log dampening for severity, linear for counts
+  const adjSeverity = Math.log10(1 + severitySum);
+  const raw = adjSeverity + incidentCount * 0.005 + recentIncidentCount * 0.08;
+  // Scale raw (typically small) into 1-10 range via piecewise
+  // Assume raw in [0, ~15]; map using sigmoid-like transform
+  const scaled = 10 / (1 + Math.exp(-(raw - 4) / 2)); // logistic centered near 4
+  let score = (10 - scaled); // invert: higher raw risk -> lower score
+  if (score < 1) score = 1; if (score > 10) score = 10;
+  let level = 'Low Risk';
+  if (score < 4) level = 'High Risk'; else if (score < 7) level = 'Medium Risk';
+  return NextResponse.json({ score: score.toFixed(1), level, incidentCount, recentIncidentCount, severitySum, adjSeverity: adjSeverity.toFixed(3), source: 'mongo' });
   } catch (e) {
     console.error('Score (mongo) failed:', e);
     return NextResponse.json({ error: 'Score failed' }, { status: 500 });

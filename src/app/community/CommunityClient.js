@@ -11,15 +11,43 @@ export default function CommunityClient() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [highlightedId, setHighlightedId] = useState(null);
   const { location } = useLocation();
   const center = location || { lat: 28.6129, lng: 77.2089 }; // fallback coords
 
   const circles = feedbackList.map((f) => ({
     center: { lat: f.location[0], lng: f.location[1] },
-    radius: 60,
+    radius: 90,
     color: f.likes > f.dislikes * 2 ? '#22c55e' : f.dislikes > f.likes ? '#ef4444' : '#f59e0b',
   }));
+
+  const feedbackMarkers = feedbackList.map((f, idx) => ({
+    lat: f.location[0],
+    lng: f.location[1],
+    label: String((idx + 1) % 100), // simple index label
+    title: `${f.location[0].toFixed(5)}, ${f.location[1].toFixed(5)}`,
+  }));
+
+  const commentLabels = feedbackList.map((f) => ({
+    id: f._id,
+    lat: f.location[0],
+    lng: f.location[1],
+    text: f.comment,
+    color: f.likes > f.dislikes * 2 ? '#22c55e' : f.dislikes > f.likes ? '#ef4444' : '#f59e0b',
+  }));
+
+  function handleMarkerClick(id) {
+    setHighlightedId(id);
+    // Scroll to the item in the side list
+    setTimeout(() => {
+      const element = document.getElementById(`feedback-${id}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  }
 
   async function handleVote(id, type) {
     // determine action based on current state
@@ -50,14 +78,19 @@ export default function CommunityClient() {
     if (!newComment.trim()) return;
     const loc = selectedLocation || [center.lat, center.lng];
     try {
-      const res = await fetch('/api/community/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment: newComment.trim(), location: loc }) });
+      const res = await fetch('/api/community/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment: newComment.trim(), location: loc, displayName }) });
       if (res.ok) {
+        localStorage.setItem('communityDisplayName', displayName);
         await loadFeedback();
         setNewComment('');
         setShowAddForm(false);
         setSelectedLocation(null);
       }
     } catch {/* ignore */}
+  }
+
+  function displayNameFromUserId(_userId) {
+    return 'Anonymous';
   }
 
   async function loadFeedback() {
@@ -67,13 +100,32 @@ export default function CommunityClient() {
       const res = await fetch(`/api/community/feedback?lat=${lat}&lng=${lng}&radius=2500`);
       const data = await res.json();
       if (Array.isArray(data.feedback)) {
-        setFeedbackList(data.feedback.map(f => ({ ...f, user: f.userId || 'Anonymous', userVote: null, timestamp: formatAgo(f.createdAt) })));
+        const seen = new Set();
+        const list = [];
+        for (const f of data.feedback) {
+          if (!f || !f._id) continue;
+          const key = String(f._id);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          list.push({
+            ...f,
+            user: f.displayName || 'Anonymous',
+            userVote: null,
+            timestamp: formatAgo(f.createdAt)
+          });
+        }
+        setFeedbackList(list);
       }
     } catch {/* ignore */}
     setLoading(false);
   }
 
-  useEffect(() => { loadFeedback(); }, [center.lat, center.lng]);
+  useEffect(() => {
+    // Load persisted name
+    const saved = localStorage.getItem('communityDisplayName');
+    if (saved) setDisplayName(saved);
+    loadFeedback();
+  }, [center.lat, center.lng]);
 
   function formatAgo(ts) {
     try {
@@ -90,9 +142,9 @@ export default function CommunityClient() {
 
   return (
     <div className="w-full min-h-screen bg-base-100 pt-4 pb-24">
-      <div className="mx-auto w-full max-w-[1100px] px-3 md:px-6 lg:grid lg:grid-cols-12 lg:gap-10">
-        {/* LEFT COLUMN */}
-  <div className="lg:col-span-7 xl:col-span-8">
+      <div className="mx-auto w-full max-w-[1300px] px-3 md:px-6 lg:grid lg:grid-cols-12 lg:gap-8">
+        {/* LEFT COLUMN (MAP BIGGER) */}
+        <div className="lg:col-span-8 xl:col-span-9 space-y-6">
           <header className="mb-6">
             <h1 className="text-2xl font-bold tracking-tight">Share Your Experience</h1>
             <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-base-content/70">
@@ -128,6 +180,14 @@ export default function CommunityClient() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
+              <input
+                type="text"
+                className="input input-bordered w-full mb-3 text-sm"
+                placeholder="Display name (optional)"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                maxLength={40}
+              />
               <textarea
                 className="textarea textarea-bordered w-full h-28 resize-none text-sm"
                 placeholder="What should others know about this area?"
@@ -155,71 +215,22 @@ export default function CommunityClient() {
             </div>
           )}
 
-          <section>
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold">Community Reports</h2>
-                <p className="text-xs text-base-content/60 mt-0.5">
-                  {feedbackList.length} {feedbackList.length === 1 ? 'report' : 'reports'} nearby
-                </p>
-              </div>
-            </div>
-      <div className="space-y-4">
-                  {loading && <div className="text-xs text-base-content/50">Loading feedback...</div>}
-                  {!loading && feedbackList.length === 0 && <div className="text-xs text-base-content/50 italic">No feedback yet.</div>}
-                  {feedbackList.map((f) => (
-        <article key={f._id} className="bg-base-100 border border-base-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="avatar placeholder shrink-0">
-                      <div className="bg-primary/10 text-primary rounded-full w-10 flex items-center justify-center">
-                        <span className="text-sm font-bold">{f.user[0]}</span>
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{f.user}</p>
-                      <p className="text-[10px] text-base-content/50">{f.timestamp}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm leading-relaxed mb-4 pl-[52px] max-w-[50ch] md:max-w-[60ch]">{f.comment}</p>
-                  <div className="flex items-center gap-2 mb-4 pl-[52px]">
-                    <MapPin className="w-4 h-4 text-base-content/40" />
-                    <span className="text-[10px] text-base-content/50 font-mono">
-                      {f.location[0].toFixed(4)}, {f.location[1].toFixed(4)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 pl-[52px]">
-                    <button
-                      onClick={() => handleVote(f._id, 'like')}
-                      className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'like' ? 'btn-success' : 'btn-ghost'}`}
-                    >
-                      <ThumbsUp className="w-4 h-4" />
-                      <span className="font-semibold text-[11px]">{f.likes}</span>
-                    </button>
-                    <button
-                      onClick={() => handleVote(f._id, 'dislike')}
-                      className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'dislike' ? 'btn-error' : 'btn-ghost'}`}
-                    >
-                      <ThumbsDown className="w-4 h-4" />
-                      <span className="font-semibold text-[11px]">{f.dislikes}</span>
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-          <footer className="mt-12 text-center text-[10px] text-base-content/50">
-            <p>Community module • Shared safety intelligence</p>
-          </footer>
-        </div>
-
-        {/* RIGHT COLUMN (Map & context) */}
-        <aside className="mt-8 lg:mt-0 lg:col-span-5 xl:col-span-4 space-y-6">
-          <div className="rounded-xl overflow-hidden shadow border border-base-300 bg-base-100" style={{ height: 240 }}>
+          {/* Large Map */}
+          <div className="rounded-xl overflow-hidden shadow border border-base-300 bg-base-100 relative" style={{ height: 520 }}>
             <GMap
               center={center}
               zoom={14}
-              markers={location ? [{ ...center, label: 'You' }] : []}
+              markers={[...(location ? [{ ...center, label: 'You' }] : []), ...feedbackMarkers]}
               circles={circles}
+              commentLabels={commentLabels}
+              onCommentVote={(id, type) => handleVote(id, type)}
+              onMarkerClick={(markerIdx) => {
+                // markerIdx includes "You" marker, so adjust
+                const feedbackIdx = location ? markerIdx - 1 : markerIdx;
+                if (feedbackIdx >= 0 && feedbackIdx < feedbackList.length) {
+                  handleMarkerClick(feedbackList[feedbackIdx]._id);
+                }
+              }}
             />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 text-[10px]">
@@ -241,7 +252,74 @@ export default function CommunityClient() {
               <li>Keep tone factual & concise.</li>
             </ul>
           </div>
-        </aside>
+        </div>
+
+        {/* RIGHT COLUMN (Messages List) */}
+        <aside className="mt-10 lg:mt-0 lg:col-span-4 xl:col-span-3 space-y-6">
+          <section>
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold">Community Reports</h2>
+                <p className="text-xs text-base-content/60 mt-0.5">
+                  {feedbackList.length} {feedbackList.length === 1 ? 'report' : 'reports'} nearby
+                </p>
+              </div>
+            </div>
+            <div className="space-y-4 max-h-[560px] overflow-y-auto pr-1">
+              {loading && <div className="text-xs text-base-content/50">Loading feedback...</div>}
+              {!loading && feedbackList.length === 0 && <div className="text-xs text-base-content/50 italic">No feedback yet.</div>}
+              {feedbackList.map((f) => (
+                <article 
+                  key={f._id} 
+                  id={`feedback-${f._id}`}
+                  className={`bg-base-100 border rounded-xl p-4 shadow-sm hover:shadow-md transition-all ${
+                    highlightedId === f._id ? 'border-primary border-2 ring-2 ring-primary/20' : 'border-base-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="avatar placeholder shrink-0">
+                      <div className="bg-primary/10 text-primary rounded-full w-9 flex items-center justify-center">
+                        <span className="text-xs font-bold">{f.user[0]}</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-xs leading-tight">{f.user}</p>
+                      <p className="text-[10px] text-base-content/50">{f.timestamp}</p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] leading-relaxed mb-3 pl-11">{f.comment}</p>
+                  <div className="flex items-center gap-2 mb-3 pl-11">
+                    <MapPin className="w-3.5 h-3.5 text-base-content/40" />
+                    <span className="text-[10px] text-base-content/50 font-mono">
+                      {f.location[0].toFixed(4)}, {f.location[1].toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 pl-11">
+                    <button
+                      onClick={() => handleVote(f._id, 'like')}
+                      className={`btn btn-2xs gap-1.5 flex-1 ${f.userVote === 'like' ? 'btn-success' : 'btn-ghost'}`}
+                      style={{ height: '28px', minHeight: '28px' }}
+                    >
+                      <ThumbsUp className="w-3.5 h-3.5" />
+                      <span className="font-semibold text-[10px]">{f.likes}</span>
+                    </button>
+                    <button
+                      onClick={() => handleVote(f._id, 'dislike')}
+                      className={`btn btn-2xs gap-1.5 flex-1 ${f.userVote === 'dislike' ? 'btn-error' : 'btn-ghost'}`}
+                      style={{ height: '28px', minHeight: '28px' }}
+                    >
+                      <ThumbsDown className="w-3.5 h-3.5" />
+                      <span className="font-semibold text-[10px]">{f.dislikes}</span>
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+          <footer className="text-center text-[10px] text-base-content/50">
+            <p>Community module • Shared safety intelligence</p>
+          </footer>
+  </aside>
       </div>
     </div>
   );

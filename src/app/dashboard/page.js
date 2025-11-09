@@ -191,7 +191,8 @@ export default function DashboardPage() {
         const lng = ev.latLng.lng();
         setActiveTab('check');
         setRoutePlan(null);
-        fetchAndShowScore(lat, lng, 'Selected Point');
+        if (useMongo) fetchAndShowScoreMongo(lat, lng, 'Selected Point');
+        else fetchAndShowScore(lat, lng, 'Selected Point');
       });
     } catch (_) {}
   }

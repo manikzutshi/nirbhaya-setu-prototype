@@ -16,10 +16,10 @@ export async function GET(request) {
     const maxLat = lat + latDeg;
     const minLng = lng - lngDeg;
     const maxLng = lng + lngDeg;
-    const list = await FeedbackModel.find({
+  const list = await FeedbackModel.find({
       'location.0': { $gte: minLat, $lte: maxLat },
       'location.1': { $gte: minLng, $lte: maxLng },
-    }, { _id: 0, __v: 0 }).sort({ createdAt: -1 }).limit(100).lean();
+  }, { __v: 0 }).sort({ createdAt: -1 }).limit(100).lean();
     return NextResponse.json({ feedback: list });
   } catch (e) {
     console.error('Feedback GET failed:', e);
@@ -29,14 +29,19 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-  const body = await request.json();
-  let { userId, comment = '', location } = body || {};
+    const body = await request.json();
+    let { userId, comment = '', location, displayName = '' } = body || {};
     if (!comment.trim() || !Array.isArray(location) || location.length !== 2) {
       return NextResponse.json({ ok: false, error: 'Invalid input' }, { status: 400 });
     }
-  if (!userId) userId = await getUserIdFromRequest();
+    if (!userId) userId = await getUserIdFromRequest();
+    // Sanitize / normalize displayName
+    displayName = String(displayName || '').trim();
+    if (!displayName) displayName = 'Anonymous';
+    // simple length cap
+    if (displayName.length > 40) displayName = displayName.slice(0, 40);
     await connectMongoose();
-    const doc = { userId, comment: comment.trim(), location, likes: 0, dislikes: 0, createdAt: new Date() };
+    const doc = { userId, displayName, comment: comment.trim(), location, likes: 0, dislikes: 0, createdAt: new Date() };
     await FeedbackModel.create(doc);
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -172,20 +172,25 @@ function loadOnce(key) {
 export default function GMap({
   center = { lat: 28.6139, lng: 77.209 },
   zoom = 14,
-  markers = [], 
-  circles = [], 
+  markers = [],
+  circles = [],
   polylines = [],
-  heatmapData = [], // [NEW] Prop for heatmap data
-  showHeatmap = true, // [NEW] Prop to toggle heatmap
+  heatmapData = [],
+  showHeatmap = true,
+  heatmapMaxIntensity = 30, // higher threshold for red hotspots (India density)
+  textLabels = [], // legacy support
+  commentLabels = [], // [{id,lat,lng,text,color}]
+  onCommentVote,
+  onMarkerClick,
   className = "w-full h-full",
   style,
-  onReady, // This is the key to fixing your page
+  onReady,
 }) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   // [MODIFIED] Added heatmapLayer to overlays
-  const overlaysRef = useRef({ markers: [], circles: [], polylines: [], heatmapLayer: null });
+  const overlaysRef = useRef({ markers: [], circles: [], polylines: [], heatmapLayer: null, textLabels: [] });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -231,8 +236,11 @@ export default function GMap({
     overlaysRef.current = { ...overlaysRef.current, markers: [], circles: [], polylines: [] };
 
     // Markers
-    markers.forEach((m) => {
+    markers.forEach((m, idx) => {
       const marker = new g.Marker({ position: m, map: mapRef.current, title: m.label });
+      if (onMarkerClick) {
+        marker.addListener('click', () => onMarkerClick(idx));
+      }
       overlaysRef.current.markers.push(marker);
     });
     // Circles
@@ -267,7 +275,7 @@ export default function GMap({
       });
       overlaysRef.current.polylines.push(line);
     });
-  }, [markers, circles, polylines, ready]);
+  }, [markers, circles, polylines, ready, onMarkerClick]);
 
   // [NEW] Heatmap updates (in its own useEffect)
   useEffect(() => {
@@ -286,18 +294,87 @@ export default function GMap({
       const heatmap = new window.google.maps.visualization.HeatmapLayer({
         data: heatmapLayerData,
         map: mapRef.current,
-        radius: 20,
-        opacity: 0.8,
+        radius: 26,
+        opacity: 0.9,
+        maxIntensity: heatmapMaxIntensity,
         gradient: [
-          "rgba(0, 255, 0, 0)",
-          "rgba(0, 255, 0, 1)",
-          "rgba(255, 255, 0, 1)",
-          "rgba(255, 0, 0, 1)",
+          'rgba(0,255,0,0)',      // transparent green start
+          'rgba(0,255,0,1)',      // green
+          'rgba(173,255,47,1)',   // yellow-green
+          'rgba(255,255,0,1)',    // yellow
+          'rgba(255,200,0,1)',    // yellow-orange
+          'rgba(255,165,0,1)',    // orange
+          'rgba(255,140,0,1)',    // dark orange
+          'rgba(255,69,0,1)',     // orange-red
+          'rgba(255,0,0,1)',      // red (only very dense)
         ],
       });
       overlaysRef.current.heatmapLayer = heatmap;
     }
   }, [heatmapData, showHeatmap, ready]); // Re-run when data or toggle changes
+
+  // [NEW] Comment label overlays showing full text above markers
+  useEffect(() => {
+    if (!ready || !mapRef.current) return;
+    const maps = window.google.maps;
+    // Clear previous comment label overlays
+    if (overlaysRef.current.commentLabels) {
+      overlaysRef.current.commentLabels.forEach(o => o.setMap(null));
+    }
+    overlaysRef.current.commentLabels = [];
+    if (!commentLabels?.length) return;
+
+    class CommentLabel extends maps.OverlayView {
+      constructor(data) {
+        super();
+        this.data = data;
+        this.div = null;
+        this.pos = new maps.LatLng(data.lat, data.lng);
+      }
+      onAdd() {
+        const d = document.createElement('div');
+        d.style.position = 'absolute';
+        d.style.transform = 'translate(-50%, calc(-100% - 30px))'; // above marker
+        d.style.padding = '6px 10px';
+        d.style.fontSize = '11px';
+        d.style.lineHeight = '1.3';
+        d.style.fontWeight = '500';
+        d.style.color = '#fff';
+        d.style.background = 'rgba(0, 0, 0, 0.75)';
+        d.style.borderRadius = '6px';
+        d.style.maxWidth = '200px';
+        d.style.whiteSpace = 'normal';
+        d.style.wordWrap = 'break-word';
+        d.style.pointerEvents = 'none';
+        d.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+        d.style.border = `2px solid ${this.data.color}`;
+        d.textContent = this.data.text;
+        
+        this.div = d;
+        const panes = this.getPanes();
+        panes.overlayLayer.appendChild(d);
+      }
+      draw() {
+        if (!this.div) return;
+        const projection = this.getProjection();
+        const point = projection.fromLatLngToDivPixel(this.pos);
+        if (point) {
+          this.div.style.left = point.x + 'px';
+          this.div.style.top = point.y + 'px';
+        }
+      }
+      onRemove() {
+        if (this.div?.parentNode) this.div.parentNode.removeChild(this.div);
+        this.div = null;
+      }
+    }
+
+    commentLabels.forEach(cl => {
+      const overlay = new CommentLabel(cl);
+      overlay.setMap(mapRef.current);
+      overlaysRef.current.commentLabels.push(overlay);
+    });
+  }, [commentLabels, ready]);
 
   if (!apiKey) {
     return (

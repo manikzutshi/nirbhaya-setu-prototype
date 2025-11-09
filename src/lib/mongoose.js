@@ -46,6 +46,7 @@ const PassSchema = new mongoose.Schema({
 
 const FeedbackSchema = new mongoose.Schema({
   userId: { type: String, index: true },
+  displayName: { type: String, default: 'Anonymous', index: true }, // user provided or derived name
   comment: String,
   location: { type: [Number], index: '2d' }, // [lat, lng]
   likes: { type: Number, default: 0 },
