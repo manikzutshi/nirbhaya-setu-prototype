@@ -13,7 +13,7 @@ export default function CommunityClient() {
   const [newComment, setNewComment] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [highlightedId, setHighlightedId] = useState(null);
+  const [highlightId, setHighlightId] = useState(null);
   const { location } = useLocation();
   const center = location || { lat: 28.6129, lng: 77.2089 }; // fallback coords
 
@@ -24,30 +24,19 @@ export default function CommunityClient() {
   }));
 
   const feedbackMarkers = feedbackList.map((f, idx) => ({
+    id: f._id,
     lat: f.location[0],
     lng: f.location[1],
     label: String((idx + 1) % 100), // simple index label
     title: `${f.location[0].toFixed(5)}, ${f.location[1].toFixed(5)}`,
   }));
 
-  const commentLabels = feedbackList.map((f) => ({
+  const commentTexts = feedbackList.map(f => ({
     id: f._id,
     lat: f.location[0],
     lng: f.location[1],
     text: f.comment,
-    color: f.likes > f.dislikes * 2 ? '#22c55e' : f.dislikes > f.likes ? '#ef4444' : '#f59e0b',
   }));
-
-  function handleMarkerClick(id) {
-    setHighlightedId(id);
-    // Scroll to the item in the side list
-    setTimeout(() => {
-      const element = document.getElementById(`feedback-${id}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
-  }
 
   async function handleVote(id, type) {
     // determine action based on current state
@@ -222,14 +211,17 @@ export default function CommunityClient() {
               zoom={14}
               markers={[...(location ? [{ ...center, label: 'You' }] : []), ...feedbackMarkers]}
               circles={circles}
-              commentLabels={commentLabels}
-              onCommentVote={(id, type) => handleVote(id, type)}
-              onMarkerClick={(markerIdx) => {
-                // markerIdx includes "You" marker, so adjust
-                const feedbackIdx = location ? markerIdx - 1 : markerIdx;
-                if (feedbackIdx >= 0 && feedbackIdx < feedbackList.length) {
-                  handleMarkerClick(feedbackList[feedbackIdx]._id);
-                }
+              commentTexts={commentTexts}
+              onMarkerClick={(id) => {
+                setHighlightId(id);
+                // Scroll to item
+                const el = document.querySelector(`[data-feedback-id="${id}"]`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+              onCommentClick={(id) => {
+                setHighlightId(id);
+                const el = document.querySelector(`[data-feedback-id="${id}"]`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }}
             />
           </div>
@@ -269,12 +261,10 @@ export default function CommunityClient() {
               {loading && <div className="text-xs text-base-content/50">Loading feedback...</div>}
               {!loading && feedbackList.length === 0 && <div className="text-xs text-base-content/50 italic">No feedback yet.</div>}
               {feedbackList.map((f) => (
-                <article 
-                  key={f._id} 
-                  id={`feedback-${f._id}`}
-                  className={`bg-base-100 border rounded-xl p-4 shadow-sm hover:shadow-md transition-all ${
-                    highlightedId === f._id ? 'border-primary border-2 ring-2 ring-primary/20' : 'border-base-300'
-                  }`}
+                <article
+                  key={f._id}
+                  data-feedback-id={f._id}
+                  className={`bg-base-100 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow ${highlightId === f._id ? 'border-primary ring-2 ring-primary/30' : 'border-base-300'}`}
                 >
                   <div className="flex items-start gap-3 mb-3">
                     <div className="avatar placeholder shrink-0">

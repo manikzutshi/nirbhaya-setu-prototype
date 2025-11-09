@@ -179,9 +179,11 @@ export default function GMap({
   showHeatmap = true,
   heatmapMaxIntensity = 30, // higher threshold for red hotspots (India density)
   textLabels = [], // legacy support
-  commentLabels = [], // [{id,lat,lng,text,color}]
+  commentLabels = [], // [{id,lat,lng,text,color,likes,dislikes,userVote}]
   onCommentVote,
-  onMarkerClick,
+  commentTexts = [], // [{id, lat, lng, text}]
+  onMarkerClick, // (id) => void
+  onCommentClick, // (id) => void
   className = "w-full h-full",
   style,
   onReady,
@@ -190,7 +192,7 @@ export default function GMap({
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   // [MODIFIED] Added heatmapLayer to overlays
-  const overlaysRef = useRef({ markers: [], circles: [], polylines: [], heatmapLayer: null, textLabels: [] });
+  const overlaysRef = useRef({ markers: [], circles: [], polylines: [], heatmapLayer: null, textLabels: [], commentLabels: [], commentTextOverlays: [] });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -235,11 +237,13 @@ export default function GMap({
     overlaysRef.current.polylines.forEach((p) => p.setMap(null));
     overlaysRef.current = { ...overlaysRef.current, markers: [], circles: [], polylines: [] };
 
-    // Markers
-    markers.forEach((m, idx) => {
-      const marker = new g.Marker({ position: m, map: mapRef.current, title: m.label });
-      if (onMarkerClick) {
-        marker.addListener('click', () => onMarkerClick(idx));
+    // Markers (support id click)
+    markers.forEach((m) => {
+      const { id, label, title, lat, lng } = m;
+      const position = (typeof lat === 'number' && typeof lng === 'number') ? { lat, lng } : m;
+      const marker = new g.Marker({ position, map: mapRef.current, title: title || label });
+      if (id && typeof onMarkerClick === 'function') {
+        marker.addListener('click', () => onMarkerClick(id));
       }
       overlaysRef.current.markers.push(marker);
     });
@@ -275,7 +279,7 @@ export default function GMap({
       });
       overlaysRef.current.polylines.push(line);
     });
-  }, [markers, circles, polylines, ready, onMarkerClick]);
+  }, [markers, circles, polylines, ready]);
 
   // [NEW] Heatmap updates (in its own useEffect)
   useEffect(() => {
@@ -313,18 +317,73 @@ export default function GMap({
     }
   }, [heatmapData, showHeatmap, ready]); // Re-run when data or toggle changes
 
-  // [NEW] Comment label overlays showing full text above markers
+  // [NEW] Text label overlays for community comments (legacy simple labels)
   useEffect(() => {
     if (!ready || !mapRef.current) return;
     const maps = window.google.maps;
-    // Clear previous comment label overlays
-    if (overlaysRef.current.commentLabels) {
-      overlaysRef.current.commentLabels.forEach(o => o.setMap(null));
-    }
-    overlaysRef.current.commentLabels = [];
-    if (!commentLabels?.length) return;
+    // Clear previous text label overlays
+    overlaysRef.current.textLabels.forEach(o => o.setMap(null));
+    overlaysRef.current.textLabels = [];
+    if (!textLabels?.length) return;
 
-    class CommentLabel extends maps.OverlayView {
+    textLabels.forEach(lbl => {
+      class DivLabel extends maps.OverlayView {
+        constructor(pos, content, color) {
+          super();
+          this.pos = pos;
+          this.content = content;
+          this.div = null;
+          this.color = color;
+        }
+        onAdd() {
+          const div = document.createElement('div');
+          div.style.position = 'absolute';
+          div.style.transform = 'translate(-50%, -100%)';
+          div.style.padding = '0';
+          div.style.fontSize = '11px';
+          div.style.lineHeight = '1.1';
+          // No background per request; add subtle text shadow for legibility
+          div.style.background = 'transparent';
+          div.style.color = '#fff';
+          div.style.textShadow = '0 1px 2px rgba(0,0,0,0.55)';
+          div.style.borderRadius = '0';
+          div.style.whiteSpace = 'nowrap';
+          div.style.pointerEvents = 'none';
+          div.style.fontWeight = '500';
+          div.textContent = this.content;
+          this.div = div;
+          const panes = this.getPanes();
+          panes.overlayLayer.appendChild(div);
+        }
+        draw() {
+          if (!this.div) return;
+          const projection = this.getProjection();
+          const point = projection.fromLatLngToDivPixel(this.pos);
+          if (point) {
+            this.div.style.left = point.x + 'px';
+            this.div.style.top = point.y + 'px';
+          }
+        }
+        onRemove() {
+          if (this.div?.parentNode) this.div.parentNode.removeChild(this.div);
+          this.div = null;
+        }
+      }
+      const overlay = new DivLabel(new maps.LatLng(lbl.lat, lbl.lng), lbl.text, lbl.color);
+      overlay.setMap(mapRef.current);
+      overlaysRef.current.textLabels.push(overlay);
+    });
+  }, [textLabels, ready]);
+
+  // [NEW] Full-text overlays above markers with click callback
+  useEffect(() => {
+    if (!ready || !mapRef.current) return;
+    const maps = window.google.maps;
+    overlaysRef.current.commentTextOverlays.forEach(o => o.setMap(null));
+    overlaysRef.current.commentTextOverlays = [];
+    if (!commentTexts?.length) return;
+
+    class CommentTextOverlay extends maps.OverlayView {
       constructor(data) {
         super();
         this.data = data;
@@ -334,25 +393,40 @@ export default function GMap({
       onAdd() {
         const d = document.createElement('div');
         d.style.position = 'absolute';
-        d.style.transform = 'translate(-50%, calc(-100% - 30px))'; // above marker
-        d.style.padding = '6px 10px';
-        d.style.fontSize = '11px';
-        d.style.lineHeight = '1.3';
-        d.style.fontWeight = '500';
-        d.style.color = '#fff';
-        d.style.background = 'rgba(0, 0, 0, 0.75)';
-        d.style.borderRadius = '6px';
-        d.style.maxWidth = '200px';
-        d.style.whiteSpace = 'normal';
-        d.style.wordWrap = 'break-word';
-        d.style.pointerEvents = 'none';
-        d.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-        d.style.border = `2px solid ${this.data.color}`;
-        d.textContent = this.data.text;
-        
+        d.style.transform = 'translate(-50%, -100%)';
+        d.style.padding = '0';
+        d.style.pointerEvents = 'auto';
+        d.style.display = 'flex';
+        d.style.flexDirection = 'column';
+        d.style.alignItems = 'center';
+        d.style.gap = '4px';
+        // dot
+        const dot = document.createElement('div');
+        dot.style.width = '6px';
+        dot.style.height = '6px';
+        dot.style.borderRadius = '999px';
+        dot.style.background = '#fff';
+        dot.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.25)';
+        d.appendChild(dot);
+        // text
+        const t = document.createElement('div');
+        t.textContent = this.data.text;
+        t.style.maxWidth = '260px';
+        t.style.whiteSpace = 'normal';
+        t.style.textAlign = 'center';
+        t.style.fontSize = '12px';
+        t.style.lineHeight = '1.25';
+        t.style.fontWeight = '600';
+        t.style.color = '#fff';
+        t.style.textShadow = '0 2px 4px rgba(0,0,0,0.65), 0 0 2px rgba(0,0,0,0.45)';
+        d.appendChild(t);
+        d.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (typeof onCommentClick === 'function') onCommentClick(this.data.id);
+        });
         this.div = d;
         const panes = this.getPanes();
-        panes.overlayLayer.appendChild(d);
+        panes.overlayMouseTarget.appendChild(d);
       }
       draw() {
         if (!this.div) return;
@@ -369,12 +443,12 @@ export default function GMap({
       }
     }
 
-    commentLabels.forEach(cl => {
-      const overlay = new CommentLabel(cl);
+    commentTexts.forEach(ct => {
+      const overlay = new CommentTextOverlay(ct);
       overlay.setMap(mapRef.current);
-      overlaysRef.current.commentLabels.push(overlay);
+      overlaysRef.current.commentTextOverlays.push(overlay);
     });
-  }, [commentLabels, ready]);
+  }, [commentTexts, onCommentClick, ready]);
 
   if (!apiKey) {
     return (
