@@ -2,13 +2,17 @@
   "name": "nirbhaya-setu",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <23"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "import:crime": "node scripts/ingest_crime_csv.js"
+    "import:crime": "node scripts/ingest_crime_csv.js",
+    "postinstall": "node -e \"console.log('Using legacy peer deps');\" && npm config set legacy-peer-deps true || true"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.12.0",
