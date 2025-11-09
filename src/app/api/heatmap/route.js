@@ -4,35 +4,26 @@ import { NextResponse } from "next/server";
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 
-// --- Initialize Firebase Admin ---
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-};
-
+// --- Initialize Firebase Admin (only once) ---
 if (!admin.apps.length) {
   try {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      }),
     });
-  } catch (error) {
-    console.error("Firebase Admin initialization error:", error.message);
+  } catch (e) {
+    console.error('Firebase init failed (heatmap):', e.message);
   }
 }
 
-const db = getFirestore();
-const collectionRef = db.collection("crime_incidents");
-
 // --- The Main API Function ---
-export async function GET(request) {
-  // Lazily get DB to avoid init errors
-  const db = getFirestore();
-  const collectionRef = db.collection("crime_incidents");
-
+export async function GET() {
   try {
-    const snapshot = await collectionRef.get();
-    
+    const db = getFirestore();
+    const snapshot = await db.collection('crime_incidents').get();
     const heatmapData = [];
     snapshot.forEach(doc => {
       const data = doc.data();
@@ -43,11 +34,9 @@ export async function GET(request) {
         });
       }
     });
-
     return NextResponse.json(heatmapData);
-
   } catch (e) {
-    console.error("Heatmap data fetch failed:", e);
-    return NextResponse.json({ error: "Failed to fetch heatmap data" }, { status: 500 });
+    console.error('Heatmap data fetch failed:', e);
+    return NextResponse.json({ error: 'Failed to fetch heatmap data' }, { status: 500 });
   }
 }

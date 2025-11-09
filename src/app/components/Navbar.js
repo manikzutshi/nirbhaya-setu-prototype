@@ -18,6 +18,7 @@ export default function Navbar() {
             <a href="#features" className="btn btn-ghost text-base font-medium text-gray-600 hover:bg-gray-100">Features</a>
             <a href="#impact" className="btn btn-ghost text-base font-medium text-gray-600 hover:bg-gray-100">Impact</a>
             <a href="#campus" className="btn btn-ghost text-base font-medium text-gray-600 hover:bg-gray-100">Campus Secure</a>
+            {/* Route Planner link removed; dashboard now hosts planner */}
           </div>
           <UserBadge />
           {!user ? <LoginLink returnTo="/dashboard" /> : <LogoutLink />}

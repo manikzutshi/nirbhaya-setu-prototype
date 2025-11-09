@@ -4,6 +4,7 @@ import "./globals.css";
 import AppNavbar from "./components/AppNavbar";
 import MobileDock from "./components/MobileDock";
 import { LocationProvider } from "./components/LocationProvider";
+import ChatWidget from "./components/ChatWidget";
 
 const gabarito = Gabarito({
   variable: "--font-gabarito",
@@ -22,8 +23,9 @@ export default function RootLayout({ children }) {
         <Auth0Provider>
           <LocationProvider>
             <AppNavbar />
-            <main className="w-full">{children}</main>
+            <main className="w-full pb-28 md:pb-0">{children}</main>
             <MobileDock />
+            <ChatWidget />
           </LocationProvider>
         </Auth0Provider>
       </body>

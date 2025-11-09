@@ -1,68 +1,49 @@
 // File: src/app/api/route/plan/route.js
 
 import { NextResponse } from "next/server";
-import admin from "firebase-admin";
-import { getFirestore, GeoPoint } from "firebase-admin/firestore";
+import { getCollection } from "@/lib/mongo";
 import { Client } from "@googlemaps/google-maps-services-js";
 import { distanceBetween } from "geofire-common";
 
-// --- Initialize Firebase Admin ---
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"), 
-};
-
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log("Firebase Admin initialized.");
-  } catch (error) {
-    console.error("Firebase Admin initialization error:", error.message);
-  }
-}
 
 // --- Initialize Google Maps Client ---
 const googleMapsClient = new Client({});
 
 // --- Helper Function: Get Risk at a Point ---
 const getRiskAtPoint = async (lat, lng) => {
-  const db = getFirestore();
-  const collectionRef = db.collection("crime_incidents");
-
+  const col = await getCollection('crime_incidents');
   const radiusInKm = 0.75;
-  const latPerKm = 1 / 110.574;
-  const lngPerKm = 1 / (111.320 * Math.cos(lat * (Math.PI / 180)));
-  const latDelta = radiusInKm * latPerKm;
-  const lngDelta = radiusInKm * lngPerKm;
-
-  const lowerLat = lat - latDelta;
-  const upperLat = lat + latDelta;
-  const lowerLng = lng - lngDelta;
-  const upperLng = lng + lngDelta;
-
-  const query = collectionRef
-    .where("location_coords", ">", new GeoPoint(lowerLat, lowerLng))
-    .where("location_coords", "<", new GeoPoint(upperLat, upperLng));
-  
-  const snapshot = await query.get();
-
-  let incidentCount = 0;
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    if (!data.location_coords) return; 
-
-    const docLat = data.location_coords.latitude;
-    const docLng = data.location_coords.longitude;
-
-    const distanceInKm = distanceBetween([docLat, docLng], [lat, lng]);
-    if (distanceInKm <= radiusInKm) {
-      incidentCount++;
+  // Try geo query first
+  try {
+    const docs = await col.find({
+      loc: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [lng, lat] },
+          $maxDistance: radiusInKm * 1000
+        }
+      }
+    }, { projection: { _id: 0, loc: 1 } }).limit(1000).toArray();
+    return docs.length; // Simple count of nearby incidents
+  } catch (e) {
+    // Fallback bbox scan
+    const latPerKm = 1 / 110.574;
+    const lngPerKm = 1 / (111.320 * Math.cos(lat * (Math.PI / 180)));
+    const latDelta = radiusInKm * latPerKm;
+    const lngDelta = radiusInKm * lngPerKm;
+    const docs = await col.find({
+      'location_coords.latitude': { $gte: lat - latDelta, $lte: lat + latDelta },
+      'location_coords.longitude': { $gte: lng - lngDelta, $lte: lng + lngDelta }
+    }, { projection: { _id: 0, location_coords: 1 } }).limit(3000).toArray();
+    let count = 0;
+    for (const d of docs) {
+      const dLat = d.location_coords?.lat || d.location_coords?.latitude;
+      const dLng = d.location_coords?.lng || d.location_coords?.longitude;
+      if (typeof dLat !== 'number' || typeof dLng !== 'number') continue;
+      const dist = distanceBetween([dLat, dLng], [lat, lng]);
+      if (dist <= radiusInKm) count++;
     }
-  });
-  return incidentCount;
+    return count;
+  }
 };
 
 // --- Helper Function: Decode Google's Polyline ---

@@ -1,105 +1,82 @@
 // File: src/app/api/score/route.js
 
 import { NextResponse } from "next/server";
-import admin from "firebase-admin";
-import { getFirestore, GeoPoint } from "firebase-admin/firestore";
+import { getCollection } from "@/lib/mongo";
 import { distanceBetween } from "geofire-common";
-
-// --- Initialize Firebase Admin ---
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-};
-
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (error) {
-    console.error("Firebase Admin initialization error:", error.message);
-  }
-}
 
 // --- The Main API Function ---
 export async function POST(request) {
   try {
     const { lat, lng } = await request.json();
-    if (!lat || !lng) {
-      return NextResponse.json({ error: "Missing lat/lng" }, { status: 400 });
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      return NextResponse.json({ error: 'Missing lat/lng' }, { status: 400 });
     }
 
-    const db = getFirestore();
-    const collectionRef = db.collection("crime_incidents");
+    const col = await getCollection('crime_incidents');
     const center = [lat, lng];
-    const radiusInKm = 1.5; // Standard 1.5km radius for a spot check
+    const radiusInKm = 1.5;
 
-    // 1. Calculate the query bounds (our "box")
-    const latPerKm = 1 / 110.574;
-    const lngPerKm = 1 / (111.320 * Math.cos(lat * (Math.PI / 180)));
-    const latDelta = radiusInKm * latPerKm;
-    const lngDelta = radiusInKm * lngPerKm;
+    // GeoJSON $near query (meters)
+    let docs = [];
+    try {
+      docs = await col.find({
+        loc: {
+          $near: {
+            $geometry: { type: 'Point', coordinates: [lng, lat] },
+            $maxDistance: radiusInKm * 1000
+          }
+        }
+      }, { projection: { _id: 0, loc: 1, data_source: 1 } }).limit(2000).toArray();
+    } catch (geoErr) {
+      // Fallback if index/field not present: scan within rough bbox
+      const latPerKm = 1 / 110.574;
+      const lngPerKm = 1 / (111.320 * Math.cos(lat * (Math.PI / 180)));
+      const latDelta = radiusInKm * latPerKm;
+      const lngDelta = radiusInKm * lngPerKm;
+      docs = await col.find({
+        'location_coords.latitude': { $gte: lat - latDelta, $lte: lat + latDelta },
+        'location_coords.longitude': { $gte: lng - lngDelta, $lte: lng + lngDelta }
+      }, { projection: { _id: 0, location_coords: 1, data_source: 1 } }).limit(5000).toArray();
+    }
 
-    const lowerLat = lat - latDelta;
-    const upperLat = lat + latDelta;
-    const lowerLng = lng - lngDelta;
-    const upperLng = lng + lngDelta;
-
-    // 2. Create the Firestore query
-    const query = collectionRef
-      .where("location_coords", ">", new GeoPoint(lowerLat, lowerLng))
-      .where("location_coords", "<", new GeoPoint(upperLat, upperLng));
-    
-    const snapshot = await query.get();
-
-    // 3. Filter for exact circular distance
     let incidentCount = 0;
     let recentIncidentCount = 0;
-
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (!data.location_coords) return; 
-
-      const docLat = data.location_coords.latitude;
-      const docLng = data.location_coords.longitude;
-
+    for (const d of docs) {
+      let docLat, docLng;
+      if (d.loc) {
+        [docLng, docLat] = d.loc.coordinates;
+      } else if (d.location_coords) {
+        docLat = d.location_coords.lat || d.location_coords.latitude;
+        docLng = d.location_coords.lng || d.location_coords.longitude;
+      }
+      if (typeof docLat !== 'number' || typeof docLng !== 'number') continue;
       const distanceInKm = distanceBetween([docLat, docLng], center);
       if (distanceInKm <= radiusInKm) {
         incidentCount++;
-        // Check for "fresher" data
-        if (data.data_source === "Delhi Police Scraper" || data.data_source === "User Reported") {
+        if (d.data_source === 'Delhi Police Scraper' || d.data_source === 'User Reported') {
           recentIncidentCount++;
         }
       }
-    });
+    }
 
-    // 4. Calculate the score
-    let score = 10.0; // Start with a perfect score (out of 10)
-    let level = "Very Low Risk";
+    let score = 10.0;
+    let level = 'Very Low Risk';
+    score -= incidentCount * 0.1;
+    score -= recentIncidentCount * 1.0;
+    if (score < 1.0) score = 1.0;
+    if (score < 4) level = 'High Risk';
+    else if (score < 7) level = 'Medium Risk';
+    else level = 'Low Risk';
 
-    // This is a simple scoring model. We can make it smarter later.
-    // Each incident in the last 5 years (your CSV) reduces the score a little.
-    // Each *recent* incident (scraper/user) reduces it a lot.
-    score -= (incidentCount * 0.1);
-    score -= (recentIncidentCount * 1.0); 
-    
-    if (score < 1.0) score = 1.0; // Floor at 1
-
-    if (score < 4) level = "High Risk";
-    else if (score < 7) level = "Medium Risk";
-    else level = "Low Risk";
-
-    // 5. Return the result
     return NextResponse.json({
-      score: score.toFixed(1), // e.g., "7.2"
-      level: level,
-      incidentCount: incidentCount,
-      recentIncidentCount: recentIncidentCount,
+      score: score.toFixed(1),
+      level,
+      incidentCount,
+      recentIncidentCount,
+      method: docs.length && docs[0].loc ? 'geo' : 'bbox'
     });
-
   } catch (e) {
-    console.error("Score check failed:", e);
-    return NextResponse.json({ error: "Score check failed" }, { status: 500 });
+    console.error('Score check failed:', e);
+    return NextResponse.json({ error: 'Score check failed' }, { status: 500 });
   }
 }

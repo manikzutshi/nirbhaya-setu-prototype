@@ -1,39 +1,42 @@
-// Stub endpoints for warden late pass management.
-export async function GET() {
-  // Mock pending requests
-  const pending = [
-    {
-      id: 'req-' + Math.random().toString(36).slice(2, 8),
-      student: 'Aarav S.',
-      until: '22:30',
-      created: new Date(Date.now() - 5 * 60000).toISOString(),
-      status: 'PENDING',
-      reason: 'Study group in library'
-    },
-    {
-      id: 'req-' + Math.random().toString(36).slice(2, 8),
-      student: 'Priya K.',
-      until: '23:00',
-      created: new Date(Date.now() - 12 * 60000).toISOString(),
-      status: 'PENDING',
-      reason: 'Project deadline'
-    }
-  ];
-  return new Response(JSON.stringify({ pending }), { status: 200, headers: { 'content-type': 'application/json' } });
+import { NextResponse } from 'next/server';
+import { connectMongoose, PassModel } from '@/lib/mongoose';
+
+// GET: list pending + recent decisions
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    await connectMongoose();
+    const query = status ? { status } : {};
+    const passes = await PassModel.find(query, { _id: 0, __v: 0 }).sort({ createdAt: -1 }).limit(50).lean();
+    return NextResponse.json({ passes });
+  } catch (e) {
+    console.error('Pass list failed:', e);
+    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  }
 }
 
+// POST: create or update
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { id, action } = body || {};
-    if (!id || !['approve', 'deny'].includes(action)) {
-      return new Response(JSON.stringify({ ok: false, error: 'Invalid parameters' }), { status: 400 });
+    const { id, action, student, until, reason } = body || {};
+    if (!id) {
+      // create
+      if (!student || !until) return NextResponse.json({ ok: false, error: 'Missing fields' }, { status: 400 });
+      const doc = { passId: 'req-' + Math.random().toString(36).slice(2, 10), student, until, reason, status: 'PENDING', createdAt: new Date() };
+      await PassModel.create(doc);
+      return NextResponse.json({ ok: true, pass: doc });
     }
-    return new Response(
-      JSON.stringify({ ok: true, id, status: action === 'approve' ? 'APPROVED' : 'DENIED' }),
-      { status: 200, headers: { 'content-type': 'application/json' } }
-    );
+    if (!['approve', 'deny'].includes(action)) {
+      return NextResponse.json({ ok: false, error: 'Invalid action' }, { status: 400 });
+    }
+    const newStatus = action === 'approve' ? 'APPROVED' : 'DENIED';
+    const updated = await PassModel.findOneAndUpdate({ passId: id }, { status: newStatus, decidedAt: new Date() }, { new: true, projection: { _id: 0, __v: 0 } }).lean();
+    if (!updated) return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 });
+    return NextResponse.json({ ok: true, pass: updated });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: 'Malformed JSON' }), { status: 400 });
+    console.error('Pass update failed:', e);
+    return NextResponse.json({ ok: false, error: 'Failed' }, { status: 500 });
   }
 }

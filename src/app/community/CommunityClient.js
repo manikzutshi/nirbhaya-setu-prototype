@@ -7,38 +7,8 @@ import { useLocation } from "../components/LocationProvider";
 
 export default function CommunityClient() {
   // State
-  const [feedbackList, setFeedbackList] = useState([
-    {
-      id: 1,
-      location: [28.615, 77.205],
-      user: 'Priya S.',
-      comment: 'Well-lit area, feels safe even at night',
-      timestamp: '2 hours ago',
-      likes: 12,
-      dislikes: 1,
-      userVote: null,
-    },
-    {
-      id: 2,
-      location: [28.612, 77.215],
-      user: 'Anonymous',
-      comment: 'Crowded market, be careful with belongings',
-      timestamp: '5 hours ago',
-      likes: 8,
-      dislikes: 2,
-      userVote: null,
-    },
-    {
-      id: 3,
-      location: [28.607, 77.208],
-      user: 'Kavya M.',
-      comment: 'Dark alley, avoid after 8 PM',
-      timestamp: '1 day ago',
-      likes: 24,
-      dislikes: 0,
-      userVote: null,
-    },
-  ]);
+  const [feedbackList, setFeedbackList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [selectedLocation, setSelectedLocation] = useState(null);
@@ -51,42 +21,71 @@ export default function CommunityClient() {
     color: f.likes > f.dislikes * 2 ? '#22c55e' : f.dislikes > f.likes ? '#ef4444' : '#f59e0b',
   }));
 
-  function handleVote(id, type) {
-    setFeedbackList((prev) =>
-      prev.map((f) => {
-        if (f.id !== id) return f;
-        let { likes, dislikes, userVote } = f;
-        if (userVote === 'like') likes--;
-        if (userVote === 'dislike') dislikes--;
-        if (userVote === type) {
-          userVote = null; // toggle off
-        } else {
-          userVote = type;
-          if (type === 'like') likes++;
-          if (type === 'dislike') dislikes++;
-        }
-        return { ...f, likes, dislikes, userVote };
-      })
-    );
+  async function handleVote(id, type) {
+    // determine action based on current state
+    const target = feedbackList.find(f => f._id === id);
+    const current = target?.userVote;
+    const action = current === type ? (type === 'like' ? 'unlike' : 'undislike') : type;
+    // optimistic update
+    setFeedbackList(prev => prev.map(f => {
+      if (f._id !== id) return f;
+      let { likes, dislikes, userVote } = f;
+      if (userVote === 'like') likes--;
+      if (userVote === 'dislike') dislikes--;
+      if (current === type) {
+        userVote = null;
+      } else {
+        userVote = type;
+        if (type === 'like') likes++;
+        if (type === 'dislike') dislikes++;
+      }
+      return { ...f, likes, dislikes, userVote };
+    }));
+    try {
+      await fetch('/api/community/feedback', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }) });
+    } catch {/* ignore */}
   }
 
-  function addFeedback() {
+  async function addFeedback() {
     if (!newComment.trim()) return;
     const loc = selectedLocation || [center.lat, center.lng];
-    const entry = {
-      id: Date.now(),
-      location: loc,
-      user: 'You',
-      comment: newComment,
-      timestamp: 'Just now',
-      likes: 0,
-      dislikes: 0,
-      userVote: null,
-    };
-    setFeedbackList((prev) => [entry, ...prev]);
-    setNewComment('');
-    setShowAddForm(false);
-    setSelectedLocation(null);
+    try {
+      const res = await fetch('/api/community/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment: newComment.trim(), location: loc }) });
+      if (res.ok) {
+        await loadFeedback();
+        setNewComment('');
+        setShowAddForm(false);
+        setSelectedLocation(null);
+      }
+    } catch {/* ignore */}
+  }
+
+  async function loadFeedback() {
+    setLoading(true);
+    try {
+      const lat = center.lat; const lng = center.lng;
+      const res = await fetch(`/api/community/feedback?lat=${lat}&lng=${lng}&radius=2500`);
+      const data = await res.json();
+      if (Array.isArray(data.feedback)) {
+        setFeedbackList(data.feedback.map(f => ({ ...f, user: f.userId || 'Anonymous', userVote: null, timestamp: formatAgo(f.createdAt) })));
+      }
+    } catch {/* ignore */}
+    setLoading(false);
+  }
+
+  useEffect(() => { loadFeedback(); }, [center.lat, center.lng]);
+
+  function formatAgo(ts) {
+    try {
+      const d = new Date(ts);
+      const diff = Date.now() - d.getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 60) return `${mins || 1}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      return `${days}d ago`;
+    } catch { return 'Just now'; }
   }
 
   return (
@@ -166,8 +165,10 @@ export default function CommunityClient() {
               </div>
             </div>
       <div className="space-y-4">
-              {feedbackList.map((f) => (
-        <article key={f.id} className="bg-base-100 border border-base-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  {loading && <div className="text-xs text-base-content/50">Loading feedback...</div>}
+                  {!loading && feedbackList.length === 0 && <div className="text-xs text-base-content/50 italic">No feedback yet.</div>}
+                  {feedbackList.map((f) => (
+        <article key={f._id} className="bg-base-100 border border-base-300 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="avatar placeholder shrink-0">
                       <div className="bg-primary/10 text-primary rounded-full w-10 flex items-center justify-center">
@@ -188,14 +189,14 @@ export default function CommunityClient() {
                   </div>
                   <div className="flex items-center gap-2 pl-[52px]">
                     <button
-                      onClick={() => handleVote(f.id, 'like')}
+                      onClick={() => handleVote(f._id, 'like')}
                       className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'like' ? 'btn-success' : 'btn-ghost'}`}
                     >
                       <ThumbsUp className="w-4 h-4" />
                       <span className="font-semibold text-[11px]">{f.likes}</span>
                     </button>
                     <button
-                      onClick={() => handleVote(f.id, 'dislike')}
+                      onClick={() => handleVote(f._id, 'dislike')}
                       className={`btn btn-xs gap-1.5 flex-1 ${f.userVote === 'dislike' ? 'btn-error' : 'btn-ghost'}`}
                     >
                       <ThumbsDown className="w-4 h-4" />

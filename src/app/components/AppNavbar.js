@@ -33,11 +33,10 @@ export default function AppNavbar() {
           <div className="flex items-center gap-3">
             {/* Desktop links */}
             <div className="hidden lg:flex items-center gap-1">
-              <NavLink href="/" label="Home" />
+              <NavLink href="/dashboard" label="Home" />
               <NavLink href="/community" label="Community" />
-              <NavLink href="/campus" label="Campus" />
               <NavLink href="/report" label="Report" />
-              <NavLink href="/dashboard" label="Dashboard" />
+              <NavLink href="/campus" label="Campus" />
               <NavLink href="/profile" label="Profile" />
               <NavLink href="/warden" label="Warden" />
             </div>

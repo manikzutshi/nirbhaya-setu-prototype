@@ -26,19 +26,15 @@ export default function WardenDashboardClient({ user }) {
   const sosTimer = useRef(null);
   const breachTimer = useRef(null);
 
-  // Initial fetch of pending passes
+  // Initial fetch of passes
   useEffect(() => {
     let active = true;
-    fetch('/api/warden/passes')
+    fetch('/api/warden/passes?status=PENDING')
       .then((r) => r.json())
-      .then((data) => {
-        if (active) setLatePassRequests(data.pending || []);
-      })
+      .then((data) => { if (active) setLatePassRequests(data.passes || []); })
       .catch(() => {})
       .finally(() => active && setLoadingPasses(false));
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   // Simulate incoming SOS alerts periodically
@@ -78,14 +74,12 @@ export default function WardenDashboardClient({ user }) {
   }, []);
 
   const updatePass = (id, action) => {
-    setLatePassRequests((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: action === 'approve' ? 'APPROVED' : 'DENIED' } : p))
-    );
+  setLatePassRequests((prev) => prev.map((p) => (p.passId === id ? { ...p, status: action === 'approve' ? 'APPROVED' : 'DENIED' } : p)));
     // Fire-and-forget to stub API
     fetch('/api/warden/passes', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id, action }),
+  body: JSON.stringify({ id, action }),
     }).catch(() => {});
   };
 

@@ -13,7 +13,7 @@ export default function MobileDock() {
   return (
     <div className="bg-base-100 border-t border-base-300 shadow-lg z-40 md:hidden fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-end justify-around px-2 py-2 relative">
-        <Link href="/" className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg hover:bg-base-200 ${tab('/') ? 'bg-base-200' : ''}`}>
+  <Link href="/dashboard" className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg hover:bg-base-200 ${tab('/dashboard') ? 'bg-base-200' : ''}`}>
           <House size={20} className="w-5 h-5" />
           <span className="text-[10px]">Home</span>
         </Link>
