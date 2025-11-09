@@ -237,10 +237,18 @@ export default function GMap({
     overlaysRef.current.polylines.forEach((p) => p.setMap(null));
     overlaysRef.current = { ...overlaysRef.current, markers: [], circles: [], polylines: [] };
 
-    // Markers (support id click)
+    // Markers (support id click) – accept {lat,lng} or {position:{lat,lng}}
     markers.forEach((m) => {
-      const { id, label, title, lat, lng } = m;
-      const position = (typeof lat === 'number' && typeof lng === 'number') ? { lat, lng } : m;
+      const { id, label, title } = m;
+      let position = null;
+      if (m && typeof m.lat === 'number' && typeof m.lng === 'number') {
+        position = { lat: m.lat, lng: m.lng };
+      } else if (m && m.position && typeof m.position.lat === 'number' && typeof m.position.lng === 'number') {
+        position = { lat: m.position.lat, lng: m.position.lng };
+      } else if (m && typeof m === 'object' && typeof m.lat === 'number') {
+        position = m; // LatLngLiteral
+      }
+      if (!position) return;
       const marker = new g.Marker({ position, map: mapRef.current, title: title || label });
       if (id && typeof onMarkerClick === 'function') {
         marker.addListener('click', () => onMarkerClick(id));

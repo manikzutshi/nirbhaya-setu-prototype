@@ -22,7 +22,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={gabarito.variable}>
       <head>
-        <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="theme-color" content="#e16441" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>

@@ -1,3 +1,7 @@
+export const runtime = 'edge';
+
+// Next.js App Router expects /manifest.webmanifest, but using /manifest.json link can 404.
+// Ensure we serve proper manifest content.
 export default function manifest() {
   return {
     name: 'Nirbhaya Setu',
