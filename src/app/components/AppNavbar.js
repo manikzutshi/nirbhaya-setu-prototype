@@ -38,7 +38,6 @@ export default function AppNavbar() {
               <NavLink href="/report" label="Report" />
               <NavLink href="/campus" label="Campus" />
               <NavLink href="/profile" label="Profile" />
-              <NavLink href="/warden" label="Warden" />
             </div>
             {/* Mobile shows only user + auth (routes via bottom dock) */}
             <UserBadge />

@@ -1,82 +1,38 @@
 // File: src/app/api/score/route.js
 
 import { NextResponse } from "next/server";
-import { getCollection } from "@/lib/mongo";
-import { distanceBetween } from "geofire-common";
+import { connectMongoose, CrimeIncidentModel } from "@/lib/mongoose";
 
-// --- The Main API Function ---
+// Mongo-only scoring (legacy endpoint path retained)
 export async function POST(request) {
   try {
-    const { lat, lng } = await request.json();
+    const { lat, lng, radiusKm = 1.2 } = await request.json();
     if (typeof lat !== 'number' || typeof lng !== 'number') {
       return NextResponse.json({ error: 'Missing lat/lng' }, { status: 400 });
     }
-
-    const col = await getCollection('crime_incidents');
-    const center = [lat, lng];
-    const radiusInKm = 1.5;
-
-    // GeoJSON $near query (meters)
-    let docs = [];
-    try {
-      docs = await col.find({
-        loc: {
-          $near: {
-            $geometry: { type: 'Point', coordinates: [lng, lat] },
-            $maxDistance: radiusInKm * 1000
-          }
-        }
-      }, { projection: { _id: 0, loc: 1, data_source: 1 } }).limit(2000).toArray();
-    } catch (geoErr) {
-      // Fallback if index/field not present: scan within rough bbox
-      const latPerKm = 1 / 110.574;
-      const lngPerKm = 1 / (111.320 * Math.cos(lat * (Math.PI / 180)));
-      const latDelta = radiusInKm * latPerKm;
-      const lngDelta = radiusInKm * lngPerKm;
-      docs = await col.find({
-        'location_coords.latitude': { $gte: lat - latDelta, $lte: lat + latDelta },
-        'location_coords.longitude': { $gte: lng - lngDelta, $lte: lng + lngDelta }
-      }, { projection: { _id: 0, location_coords: 1, data_source: 1 } }).limit(5000).toArray();
-    }
-
-    let incidentCount = 0;
+    await connectMongoose();
+    const docs = await CrimeIncidentModel.aggregate([
+      { $geoNear: { key: 'loc', near: { type: 'Point', coordinates: [lng, lat] }, distanceField: 'distance', spherical: true, maxDistance: radiusKm * 1000 } },
+      { $project: { severityScore: 1, source: 1 } },
+      { $limit: 2000 }
+    ]).exec();
+    let incidentCount = docs.length;
+    let severitySum = 0;
     let recentIncidentCount = 0;
     for (const d of docs) {
-      let docLat, docLng;
-      if (d.loc) {
-        [docLng, docLat] = d.loc.coordinates;
-      } else if (d.location_coords) {
-        docLat = d.location_coords.lat || d.location_coords.latitude;
-        docLng = d.location_coords.lng || d.location_coords.longitude;
-      }
-      if (typeof docLat !== 'number' || typeof docLng !== 'number') continue;
-      const distanceInKm = distanceBetween([docLat, docLng], center);
-      if (distanceInKm <= radiusInKm) {
-        incidentCount++;
-        if (d.data_source === 'Delhi Police Scraper' || d.data_source === 'User Reported') {
-          recentIncidentCount++;
-        }
-      }
+      const sev = d.severityScore || 0;
+      if (d.source === 'user_report') { recentIncidentCount++; severitySum += sev * 1.2; } else severitySum += sev;
     }
-
-    let score = 10.0;
-    let level = 'Very Low Risk';
-    score -= incidentCount * 0.1;
-    score -= recentIncidentCount * 1.0;
-    if (score < 1.0) score = 1.0;
-    if (score < 4) level = 'High Risk';
-    else if (score < 7) level = 'Medium Risk';
-    else level = 'Low Risk';
-
-    return NextResponse.json({
-      score: score.toFixed(1),
-      level,
-      incidentCount,
-      recentIncidentCount,
-      method: docs.length && docs[0].loc ? 'geo' : 'bbox'
-    });
+    // Normalize to 1-10: higher severity => lower score
+    // Simple mapping: score = 10 - (alpha*severity + beta*incidents + gamma*recent)
+    const alpha = 0.015, beta = 0.02, gamma = 0.6;
+    let score = 10 - (alpha * severitySum + beta * incidentCount + gamma * recentIncidentCount);
+    if (score < 1) score = 1; if (score > 10) score = 10;
+    let level = 'Low Risk';
+    if (score < 4) level = 'High Risk'; else if (score < 7) level = 'Medium Risk';
+    return NextResponse.json({ score: score.toFixed(1), level, incidentCount, recentIncidentCount, severitySum, source: 'mongo' });
   } catch (e) {
-    console.error('Score check failed:', e);
-    return NextResponse.json({ error: 'Score check failed' }, { status: 500 });
+    console.error('Score (mongo) failed:', e);
+    return NextResponse.json({ error: 'Score failed' }, { status: 500 });
   }
 }

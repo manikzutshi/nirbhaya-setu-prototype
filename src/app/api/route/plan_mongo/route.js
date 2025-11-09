@@ -18,20 +18,21 @@ function decodePolyline(encoded) {
 }
 
 async function pointRisk(lat, lng) {
-  await connectMongoose();
   const docs = await CrimeIncidentModel.aggregate([
-    { $geoNear: { near: { type: 'Point', coordinates: [lng, lat] }, distanceField: 'distance', spherical: true, maxDistance: 750 } },
-    { $limit: 500 },
-    { $project: { severityScore: 1, source: 1 } }
+    { $geoNear: { key: 'loc', near: { type: 'Point', coordinates: [lng, lat] }, distanceField: 'distance', spherical: true, maxDistance: 750 } },
+    { $project: { severityScore: 1, source: 1 } },
+    { $limit: 400 }
   ]).exec();
   let severity = 0;
-  for (const d of docs) severity += (d.severityScore || 0);
-  return severity; // raw severity sum around point
+  for (const d of docs) severity += (d.severityScore || 0) * (d.source === 'user_report' ? 1.2 : 1);
+  return severity;
 }
 
 export async function POST(request) {
   try {
     const { origin, destination } = await request.json();
+    if (!origin || !destination) return NextResponse.json({ error: 'Missing origin/destination' }, { status: 400 });
+    await connectMongoose(); // single connection
     const directionsResponse = await googleMapsClient.directions({
       params: { origin: origin + ', Delhi', destination: destination + ', Delhi', mode: 'driving', alternatives: true, key: process.env.GOOGLE_MAPS_API_KEY }
     });
@@ -39,8 +40,9 @@ export async function POST(request) {
     const analyzed = [];
     for (const route of directionsResponse.data.routes) {
       const path = decodePolyline(route.overview_polyline.points);
+      // Sample fewer points for performance (every ~12th)
       let totalSeverity = 0;
-      for (let i = 0; i < path.length; i += 10) {
+      for (let i = 0; i < path.length; i += 12) {
         const p = path[i];
         totalSeverity += await pointRisk(p.lat, p.lng);
       }
@@ -48,12 +50,11 @@ export async function POST(request) {
         path,
         meta: {
           eta: route.legs[0].duration.text,
-            distance: route.legs[0].distance.text,
-            severity: totalSeverity,
+          distance: route.legs[0].distance.text,
+          severity: totalSeverity,
         }
       });
     }
-    // Normalize severity to risk score 1-10 (higher severity -> higher risk score)
     const vals = analyzed.map(r => r.meta.severity);
     const max = Math.max(...vals); const min = Math.min(...vals); const range = max - min || 1;
     analyzed.forEach(r => { const scaled = (r.meta.severity - min)/range; r.meta.risk = (1 + scaled * 9).toFixed(1); });

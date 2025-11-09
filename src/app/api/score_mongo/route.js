@@ -11,6 +11,7 @@ export async function POST(request) {
     // Geo query using $geoNear via aggregation for severity sum
     const pipeline = [
       { $geoNear: {
+          key: 'loc',
           near: { type: 'Point', coordinates: [lng, lat] },
           distanceField: 'distance',
           spherical: true,
@@ -24,8 +25,8 @@ export async function POST(request) {
     let severitySum = 0;
     let recentIncidentCount = 0; // user reports considered recent
     for (const d of docs) {
-      severitySum += d.severityScore || 0;
-      if (d.source === 'user_report') recentIncidentCount++;
+      const sev = d.severityScore || 0;
+      if (d.source === 'user_report') { recentIncidentCount++; severitySum += sev * 1.2; } else severitySum += sev;
     }
     // Simple normalization: severity to penalty (tune later)
     let score = 10 - (severitySum * 0.02) - (recentIncidentCount * 0.5) - (incidentCount * 0.01);

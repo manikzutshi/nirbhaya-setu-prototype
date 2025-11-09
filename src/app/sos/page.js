@@ -17,6 +17,24 @@ export default function SosPage() {
   const etaTimerRef = useRef(null);
   const { location: userLoc } = useLocation();
 
+  // Load persisted panic word and toggle
+  useEffect(() => {
+    try {
+      const pw = localStorage.getItem('panicWord');
+      if (pw) setPanicWord(pw);
+      const en = localStorage.getItem('voiceTriggerEnabled');
+      if (en === 'true') setListening(true);
+    } catch {}
+  }, []);
+
+  // Persist settings when changed
+  useEffect(() => {
+    try { localStorage.setItem('panicWord', panicWord || ''); } catch {}
+  }, [panicWord]);
+  useEffect(() => {
+    try { localStorage.setItem('voiceTriggerEnabled', listening ? 'true' : 'false'); } catch {}
+  }, [listening]);
+
   // Setup speech recognition for ambient transcript + panic word trigger
   useEffect(() => {
     const SR = typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -49,6 +67,8 @@ export default function SosPage() {
   async function startSos() {
     setActive(true);
     vibrate([150,70,250,70,300]);
+  // Navigate feedback for external triggers
+  try { if (window?.history?.pushState) window.history.replaceState(null, '', '/sos'); } catch {}
     // Trigger backend (stub AWS SNS)
     fetch("/api/sos/activate", { method: "POST" }).catch(() => {});
     // Simulate checklist progression

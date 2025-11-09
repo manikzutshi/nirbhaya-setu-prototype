@@ -61,16 +61,9 @@ export default function DashboardPage() {
   // Internal markers (user/start/end/safety check point)
   const [markers, setMarkers] = useState([]);
 
-  // Experimental Mongo map state (A/B testing)
+  // Mongo enhanced (single map, choose data source)
+  const [useMongo, setUseMongo] = useState(false);
   const [heatmapDataMongo, setHeatmapDataMongo] = useState([]);
-  const [showHeatmapMongo, setShowHeatmapMongo] = useState(true);
-  const mongoMapsObjRef = useRef(null);
-  const mongoMapInstanceRef = useRef(null);
-  const [markersMongo, setMarkersMongo] = useState([]);
-  const [routePlanMongo, setRoutePlanMongo] = useState(null);
-  const [routeStatusMongo, setRouteStatusMongo] = useState("");
-  const [scoreResultMongo, setScoreResultMongo] = useState(null);
-  const [checkStatusMongo, setCheckStatusMongo] = useState("");
   const [mongoLoading, setMongoLoading] = useState(false);
 
   // Contact onboarding (local) + banner
@@ -94,7 +87,7 @@ export default function DashboardPage() {
     ];
   }, [routePlan]);
 
-  // Fetch heatmap data once
+  // Fetch heatmap data once (legacy)
   useEffect(() => {
     (async () => {
       try {
@@ -105,7 +98,7 @@ export default function DashboardPage() {
     })();
   }, []);
 
-  // Fetch Mongo heatmap data once (experimental)
+  // Fetch Mongo heatmap data once
   useEffect(() => {
     (async () => {
       try {
@@ -203,17 +196,7 @@ export default function DashboardPage() {
     } catch (_) {}
   }
 
-  function onMongoMapReady({ map, maps }) {
-    mongoMapsObjRef.current = maps;
-    mongoMapInstanceRef.current = map;
-    try {
-      maps.event.addListener(map, 'click', (ev) => {
-        const lat = ev.latLng.lat();
-        const lng = ev.latLng.lng();
-        fetchAndShowScoreMongo(lat, lng, 'Selected Point');
-      });
-    } catch (_) {}
-  }
+  // Single map approach: click handler chooses current data source
 
   async function fetchAndShowScore(lat, lng, name) {
     setCheckLoading(true);
@@ -240,27 +223,17 @@ export default function DashboardPage() {
   }
 
   async function fetchAndShowScoreMongo(lat, lng, name) {
-    setMongoLoading(true);
-    setCheckStatusMongo('Analyzing safety (Mongo)...');
-    setRoutePlanMongo(null);
-    setScoreResultMongo(null);
-    setMarkersMongo([{ lat, lng, label: name }]);
+    setMongoLoading(true); setCheckStatus('Analyzing (Mongo)...');
+    setRoutePlan(null); setScoreResult(null); setMarkers([{ lat, lng, label: name }]);
     try {
-      if (mongoMapInstanceRef.current) {
-        mongoMapInstanceRef.current.panTo({ lat, lng });
-        mongoMapInstanceRef.current.setZoom(15);
-      }
+      if (mapInstanceRef.current) { mapInstanceRef.current.panTo({ lat, lng }); mapInstanceRef.current.setZoom(15); }
       const res = await fetch('/api/score_mongo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat, lng }) });
       if (!res.ok) throw new Error('Score Mongo API failed');
       const data = await res.json();
-      setScoreResultMongo({ ...data, name });
-      setCheckStatusMongo('Score calculated.');
-    } catch (e) {
-      setCheckStatusMongo('Error calculating score');
-      setScoreResultMongo(null);
-    } finally {
-      setMongoLoading(false);
-    }
+      setScoreResult({ ...data, name });
+      setCheckStatus('Score (Mongo) done');
+    } catch(e) { setCheckStatus('Mongo score error'); setScoreResult(null); }
+    finally { setMongoLoading(false); }
   }
 
   async function handleCheckScore() {
@@ -299,42 +272,37 @@ export default function DashboardPage() {
   }
 
   async function handlePlanRouteMongo() {
-    if (!origin || !destination) { setRouteStatusMongo('Please enter both start and end points.'); return; }
-    setMongoLoading(true);
-    setRoutePlanMongo(null);
-    setScoreResultMongo(null);
-    setMarkersMongo([]);
-    setRouteStatusMongo('Planning route (Mongo)...');
+    if (!origin || !destination) { setRouteStatus('Need start/end'); return; }
+    setMongoLoading(true); setRoutePlan(null); setScoreResult(null); setMarkers([]); setRouteStatus('Mongo planning...');
     try {
       const res = await fetch('/api/route/plan_mongo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ origin, destination }) });
       if (!res.ok) throw new Error('Route Mongo API failed');
       const data = await res.json();
-      if (data.error) {
-        setRouteStatusMongo('Error: ' + data.error);
-        setMarkersMongo([]);
-      } else {
-        setRoutePlanMongo(data);
-        setMarkersMongo([
+      if (data.error) { setRouteStatus('Error: ' + data.error); setMarkers([]); }
+      else {
+        setRoutePlan(data);
+        setMarkers([
           { lat: data.start_location.lat, lng: data.start_location.lng, label: 'Start' },
           { lat: data.end_location.lat, lng: data.end_location.lng, label: 'End' }
         ]);
-        setRouteStatusMongo('Fastest (Orange), Safest (Blue)');
+        setRouteStatus('Fastest (Red/Orange), Safest (Green/Blue)');
       }
-    } catch (e) {
-      setRouteStatusMongo('Failed to plan route');
-    } finally { setMongoLoading(false); }
+    } catch(e) { setRouteStatus('Mongo plan failed'); }
+    finally { setMongoLoading(false); }
   }
 
+  // Adapt polylines based on source
   const polylinesMongo = useMemo(() => {
-    if (!routePlanMongo) return [];
+    if (!routePlan || !useMongo) return [];
+    if (!routePlan.fastest || !routePlan.safest) return [];
     return [
-      { path: routePlanMongo.fastest.path, strokeColor: '#fb923c', strokeWeight: 5, dashed: true },
-      { path: routePlanMongo.safest.path, strokeColor: '#3b82f6', strokeWeight: 5 }
+      { path: routePlan.fastest.path, strokeColor: '#fb923c', strokeWeight: 5, dashed: true },
+      { path: routePlan.safest.path, strokeColor: '#3b82f6', strokeWeight: 5 }
     ];
-  }, [routePlanMongo]);
+  }, [routePlan, useMongo]);
 
   function checkMyAreaMongo() {
-    if (!userLoc) { setCheckStatusMongo('Location unavailable'); return; }
+    if (!userLoc) { setCheckStatus('Location unavailable'); return; }
     fetchAndShowScoreMongo(userLoc.lat, userLoc.lng, 'Your Area');
   }
 
@@ -391,25 +359,21 @@ export default function DashboardPage() {
               <span className="text-xs font-medium text-base-content/50">To</span>
               <input ref={destinationRef} value={destination} onChange={(e)=>setDestination(e.target.value)} placeholder="Destination" className="grow bg-transparent outline-none" />
             </label>
-            <div className="flex gap-2">
-              <button className="btn btn-primary btn-sm" onClick={handlePlanRoute} disabled={routeLoading}>{routeLoading ? 'Planning…' : 'Plan Route'}</button>
-              <button className="btn btn-ghost btn-sm" onClick={()=>{ setRoutePlan(null); setRouteStatus(''); setMarkers([]); }}>Reset</button>
-              <button className="btn btn-outline btn-sm" onClick={handlePlanRouteMongo} disabled={mongoLoading}>{mongoLoading ? 'Mongo…' : 'Plan (Mongo)'}</button>
+            <div className="flex gap-2 flex-wrap">
+              <button className="btn btn-primary btn-sm" onClick={useMongo ? handlePlanRouteMongo : handlePlanRoute} disabled={routeLoading || mongoLoading}>{(routeLoading||mongoLoading) ? 'Planning…' : 'Plan Route'}</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>{ setRoutePlan(null); setRouteStatus(''); setMarkers([]); setScoreResult(null); }}>Reset</button>
+              <label className="flex items-center gap-1 text-[11px] ml-auto cursor-pointer">
+                <span className="text-base-content/60">Mongo</span>
+                <input type="checkbox" className="toggle toggle-xs" checked={useMongo} onChange={()=>setUseMongo(!useMongo)} />
+              </label>
             </div>
             <p className="text-xs text-base-content/60 h-5">{routeStatus}</p>
-            {routeStatusMongo && <p className="text-[11px] text-base-content/50 h-4">{routeStatusMongo}</p>}
+            {mongoLoading && <p className="text-[11px] text-base-content/50 h-4">Mongo analyzing…</p>}
             {routePlan && (
               <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
-                <InfoStat label="Fastest" val={`${routePlan.fastest.meta.eta} | ${routePlan.fastest.meta.distance}`} color="text-error" />
-                <InfoStat label="Safest" val={`${routePlan.safest.meta.eta} | ${routePlan.safest.meta.distance}`} color="text-success" />
+                <InfoStat label="Fastest" val={`${routePlan.fastest.meta.eta} | ${routePlan.fastest.meta.distance}`} color={useMongo ? 'text-warning' : 'text-error'} />
+                <InfoStat label="Safest" val={`${routePlan.safest.meta.eta} | ${routePlan.safest.meta.distance}`} color={useMongo ? 'text-info' : 'text-success'} />
                 <div className="col-span-2 text-[11px] text-base-content/50">Risk (Safest): {routePlan.safest.meta.risk}/10</div>
-              </div>
-            )}
-            {routePlanMongo && (
-              <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
-                <InfoStat label="Fastest (M)" val={`${routePlanMongo.fastest.meta.eta} | ${routePlanMongo.fastest.meta.distance}`} color="text-warning" />
-                <InfoStat label="Safest (M)" val={`${routePlanMongo.safest.meta.eta} | ${routePlanMongo.safest.meta.distance}`} color="text-info" />
-                <div className="col-span-2 text-[11px] text-base-content/50">Risk (Safest M): {routePlanMongo.safest.meta.risk}/10</div>
               </div>
             )}
           </div>
@@ -421,9 +385,13 @@ export default function DashboardPage() {
               <span className="text-xs font-medium text-base-content/50">Location</span>
               <input ref={checkInputRef} value={checkLocation} onChange={(e)=>setCheckLocation(e.target.value)} placeholder="Enter location" className="grow bg-transparent outline-none" />
             </label>
-            <div className="flex gap-2">
-              <button className="btn btn-success btn-sm" onClick={handleCheckScore} disabled={checkLoading}>{checkLoading ? 'Checking…' : 'Check Score'}</button>
-              <button className="btn btn-ghost btn-sm" onClick={checkMyArea} disabled={checkLoading}>My Area</button>
+            <div className="flex gap-2 flex-wrap">
+              <button className="btn btn-success btn-sm" onClick={useMongo ? ()=>checkMyAreaMongo() : handleCheckScore} disabled={checkLoading || mongoLoading}>{(checkLoading||mongoLoading) ? 'Checking…' : 'Check Score'}</button>
+              <button className="btn btn-ghost btn-sm" onClick={useMongo ? checkMyAreaMongo : checkMyArea} disabled={checkLoading || mongoLoading}>My Area</button>
+              <label className="flex items-center gap-1 text-[11px] ml-auto cursor-pointer">
+                <span className="text-base-content/60">Mongo</span>
+                <input type="checkbox" className="toggle toggle-xs" checked={useMongo} onChange={()=>setUseMongo(!useMongo)} />
+              </label>
             </div>
             <p className="text-xs text-base-content/60 h-5">{checkStatus}</p>
             {scoreResult && (
@@ -478,21 +446,30 @@ export default function DashboardPage() {
         {/* RIGHT COLUMN */}
         {/* RIGHT COLUMN (map) */}
         <aside className="mt-10 lg:mt-0 lg:col-span-7 xl:col-span-8">
-          <div className="rounded-xl overflow-hidden shadow-lg border border-base-300 bg-base-100" style={{ height: 380 }}>
+          <div className="rounded-xl overflow-hidden shadow-lg border border-base-300 bg-base-100" style={{ height: 420 }}>
             <GMap
               zoom={13}
               center={userLoc || { lat: 28.6139, lng: 77.2090 }}
               markers={[...(userLoc ? [{ lat: userLoc.lat, lng: userLoc.lng, label: 'You' }] : []), ...markers]}
-              polylines={polylines}
-              heatmapData={heatmapData}
+              polylines={useMongo ? polylinesMongo : polylines}
+              heatmapData={useMongo ? heatmapDataMongo : heatmapData}
               showHeatmap={showHeatmap}
               onReady={onMapReady}
             />
           </div>
           <div className="mt-3 flex items-center justify-between gap-4 text-xs flex-wrap">
             <div className="flex items-center gap-4 flex-wrap">
-              <LineLegend color="#ef4444" text="Fastest (High Risk)" dashed />
-              <LineLegend color="#22c55e" text="Safest (Low Risk)" />
+              {useMongo ? (
+                <>
+                  <LineLegend color="#fb923c" text="Fastest" dashed />
+                  <LineLegend color="#3b82f6" text="Safest" />
+                </>
+              ) : (
+                <>
+                  <LineLegend color="#ef4444" text="Fastest" dashed />
+                  <LineLegend color="#22c55e" text="Safest" />
+                </>
+              )}
               {routePlan?.safest?.meta?.risk && (
                 <span className="font-medium text-base-content/70">Risk: {routePlan.safest.meta.risk}/10</span>
               )}
@@ -502,51 +479,18 @@ export default function DashboardPage() {
               <input type="checkbox" className="toggle toggle-sm" checked={showHeatmap} onChange={()=>setShowHeatmap(!showHeatmap)} />
             </label>
           </div>
-          {/* Experimental Mongo Map clone (A/B) */}
-          <div className="mt-8 rounded-xl overflow-hidden shadow-lg border border-base-300 bg-base-100" style={{ height: 320 }}>
-            <GMap
-              zoom={13}
-              center={userLoc || { lat: 28.6139, lng: 77.2090 }}
-              markers={[...(userLoc ? [{ lat: userLoc.lat, lng: userLoc.lng, label: 'You' }] : []), ...markersMongo]}
-              polylines={polylinesMongo}
-              heatmapData={heatmapDataMongo}
-              showHeatmap={showHeatmapMongo}
-              onReady={onMongoMapReady}
-            />
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-4 text-[11px] flex-wrap">
-            <div className="flex items-center gap-3 flex-wrap">
-              <LineLegend color="#fb923c" text="Fastest M" dashed />
-              <LineLegend color="#3b82f6" text="Safest M" />
-              {routePlanMongo?.safest?.meta?.risk && (
-                <span className="font-medium text-base-content/70">Risk M: {routePlanMongo.safest.meta.risk}/10</span>
-              )}
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer ml-auto">
-              <span className="text-base-content/70">Mongo Heatmap</span>
-              <input type="checkbox" className="toggle toggle-xs" checked={showHeatmapMongo} onChange={()=>setShowHeatmapMongo(!showHeatmapMongo)} />
-            </label>
-          </div>
-          {scoreResultMongo && (
+          {scoreResult && (
             <div className="mt-2 p-2 rounded-lg bg-base-200 border border-base-300 text-[11px]">
               <div className="flex items-center justify-between">
-                <span className="font-semibold">{scoreResultMongo.name}</span>
-                <span className="font-semibold">{scoreResultMongo.level}</span>
+                <span className="font-semibold">{scoreResult.name}</span>
+                <span className="font-semibold">{scoreResult.level}</span>
               </div>
-              <div>Score: {scoreResultMongo.score}/10 • Incidents: {scoreResultMongo.incidentCount}</div>
+              <div>Score: {scoreResult.score}/10 • Incidents: {scoreResult.incidentCount}</div>
             </div>
           )}
-          {checkStatusMongo && <p className="mt-1 text-[10px] text-base-content/50">{checkStatusMongo}</p>}
+          {(mongoLoading || checkLoading) && <p className="mt-1 text-[10px] text-base-content/50">Analyzing…</p>}
         </aside>
       </div>
-      {/* Floating SOS */}
-      <a
-        href="/sos"
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-error text-error-content shadow-lg hover:shadow-xl flex items-center justify-center"
-        aria-label="Emergency SOS"
-      >
-        <Siren className="h-5 w-5" />
-      </a>
       {/* Contact Onboarding Modal */}
       {showContactModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
