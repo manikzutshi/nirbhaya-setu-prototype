@@ -8,6 +8,27 @@ const path = require('node:path');
 const { parse } = require('csv-parse/sync');
 const { MongoClient } = require('mongodb');
 
+// Lightweight .env loader to read .env.local / .env if present (no extra deps)
+function loadEnvFile(p) {
+  try {
+    if (!fs.existsSync(p)) return;
+    const text = fs.readFileSync(p, 'utf8');
+    for (const line of text.split(/\r?\n/)) {
+      if (!line || line.trim().startsWith('#')) continue;
+      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+      if (!m) continue;
+      let v = m[2];
+      // strip surrounding quotes
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith('\'') && v.endsWith('\''))) {
+        v = v.slice(1, -1);
+      }
+      if (!(m[1] in process.env)) process.env[m[1]] = v;
+    }
+  } catch {}
+}
+loadEnvFile(path.join(process.cwd(), '.env.local'));
+loadEnvFile(path.join(process.cwd(), '.env'));
+
 function toNum(v) { if (v === undefined || v === null || v === '') return 0; const n = Number(v); return isNaN(n) ? 0 : n; }
 
 function computeSeverity(row) {
